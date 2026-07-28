@@ -2527,6 +2527,40 @@ def format_high_impact_alert(
     )
     ist_now  = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     date_str = ist_now.strftime("%d %b %Y, %I:%M %p IST")
+    
+    # Calculate optional trade setup if asset has a corresponding trade pair
+    trade_section = ""
+    pairs = TRADE_PAIRS.get(asset) if asset else None
+    if pairs:
+        try:
+            prices = fetch_current_prices()
+            pair, multiplier, pip_size = pairs[0]
+            price = prices.get(pair)
+            if price:
+                is_buy = (direction == "Bullish") == (multiplier > 0)
+                dir_label = "BUY" if is_buy else "SELL"
+                e  = round(price, 4)
+                t1 = round(price + 30 * pip_size if is_buy else price - 30 * pip_size, 4)
+                t2 = round(price + 50 * pip_size if is_buy else price - 50 * pip_size, 4)
+                s  = round(price - 20 * pip_size if is_buy else price + 20 * pip_size, 4)
+                reward = abs(t2 - e)
+                risk   = abs(s - e)
+                rr_str = f"{reward / risk:.1f}" if risk > 0 else "?"
+                
+                trade_lines = [
+                    f"━━━━━━━━━━━━━━━━━━",
+                    f"🎯 *AI TRADE SETUP — {dir_label}*",
+                    f"📌 *Entry:* {_price_str(e, pair)}",
+                    f"🛑 *Stop Loss:* {_price_str(s, pair)}  ({_price_str(s - e, pair)})",
+                    f"🎯 *TP 1:* {_price_str(t1, pair)}  (+" + _price_str(abs(t1 - e), pair) + ")",
+                    f"🎯 *TP 2:* {_price_str(t2, pair)}  (+" + _price_str(abs(t2 - e), pair) + ")",
+                    f"⚖️ *Risk:Reward:* 1 : {rr_str}",
+                ]
+                trade_section = "\n".join(trade_lines) + "\n"
+                log_signal(pair, dir_label, e, t1, t2, s, "high_impact")
+        except Exception as exc:
+            print(f"[ERROR] High impact trade setup calculation failed: {exc}")
+
     return (
         f"📰 *BREAKING NEWS ALERT*\n"
         f"━━━━━━━━━━━━━━━━━━\n"
@@ -2535,6 +2569,7 @@ def format_high_impact_alert(
         f"━━━━━━━━━━━━━━━━━━\n"
         f"💥 *Impact:* {dir_icon} for *{asset}*\n"
         f"🤖 *Confidence:* {confidence_pct}%\n"
+        f"{trade_section}"
         f"━━━━━━━━━━━━━━━━━━\n"
         f"⚡ *Quick Analysis:*\n"
         f"{_strip_md(analysis[:350])}\n\n"
@@ -3212,26 +3247,42 @@ async def send_institutional_signals(bot: Bot, seen_keys: set[str]) -> int:
 async def run_worker_cycle(bot: Bot, seen_keys: set[str]) -> int:
     total_sent = 0
 
-    forex_articles = fetch_latest_articles(FOREX_QUERY)
-    total_sent += await send_category_article(
-        bot, forex_articles, seen_keys,
-        "forex", format_forex_message,
-    )
+    try:
+        forex_articles = fetch_latest_articles(FOREX_QUERY)
+        total_sent += await send_category_article(
+            bot, forex_articles, seen_keys,
+            "forex", format_forex_message,
+        )
+    except Exception as exc:
+        print(f"[ERROR] Forex category failed in cycle: {exc}")
 
-    india_articles = fetch_latest_articles(INDIA_MARKET_QUERY)
-    total_sent += await send_category_article(
-        bot, india_articles, seen_keys,
-        "india", format_india_message,
-    )
+    try:
+        india_articles = fetch_latest_articles(INDIA_MARKET_QUERY)
+        total_sent += await send_category_article(
+            bot, india_articles, seen_keys,
+            "india", format_india_message,
+        )
+    except Exception as exc:
+        print(f"[ERROR] India category failed in cycle: {exc}")
 
-    intraday_articles = fetch_latest_articles(INTRADAY_STOCK_QUERY)
-    total_sent += await send_category_article(
-        bot, intraday_articles, seen_keys,
-        "intraday", format_intraday_message,
-    )
+    try:
+        intraday_articles = fetch_latest_articles(INTRADAY_STOCK_QUERY)
+        total_sent += await send_category_article(
+            bot, intraday_articles, seen_keys,
+            "intraday", format_intraday_message,
+        )
+    except Exception as exc:
+        print(f"[ERROR] Intraday category failed in cycle: {exc}")
 
-    total_sent += await send_options_suggestion(bot, seen_keys)
-    total_sent += await send_institutional_signals(bot, seen_keys)
+    try:
+        total_sent += await send_options_suggestion(bot, seen_keys)
+    except Exception as exc:
+        print(f"[ERROR] Options suggestions failed in cycle: {exc}")
+
+    try:
+        total_sent += await send_institutional_signals(bot, seen_keys)
+    except Exception as exc:
+        print(f"[ERROR] Institutional signals failed in cycle: {exc}")
 
     return total_sent
 
@@ -3279,8 +3330,17 @@ async def news_broadcast_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def high_impact_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     global _seen_keys
     try:
-        articles = fetch_latest_articles(FOREX_QUERY)
-        for article in articles:
+        # Check Forex, India and Intraday queries for high impact news immediately
+        all_articles = []
+        for q, cat in [(FOREX_QUERY, "forex"), (INDIA_MARKET_QUERY, "india"), (INTRADAY_STOCK_QUERY, "intraday")]:
+            try:
+                for art in fetch_latest_articles(q):
+                    art["_category"] = cat
+                    all_articles.append(art)
+            except Exception:
+                pass
+
+        for article in all_articles:
             if not is_recent(article, max_age_hours=6):
                 continue
             if not is_high_impact(article):
@@ -3288,8 +3348,15 @@ async def high_impact_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             key = article_key(article)
             if not key:
                 continue
-            full_key = f"forex:{key}"
-            if full_key in _seen_keys:
+            cat = article.get("_category", "forex")
+            full_key = f"{cat}:{key}"
+            
+            # Check seen keys (raw key, full prefix key, and normalized title hash)
+            if full_key in _seen_keys or key in _seen_keys or any(k.endswith(f":{key}") for k in _seen_keys):
+                continue
+            title = article.get("title") or ""
+            title_norm = clean_title_for_dedup(title)
+            if title_norm and f"title:{title_norm}" in _seen_keys:
                 continue
 
             asset = identify_asset(article)
@@ -3300,7 +3367,6 @@ async def high_impact_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
                 direction, confidence = compute_confidence(text)
             ai_analysis = ai_analyze_news(article) or ""
             conf_pct = _confidence_pct(confidence)
-            now_str = datetime.now(timezone(timedelta(hours=5, minutes=30))).strftime("%d %b %Y")
             text_msg = format_high_impact_alert(
                 title=article.get("title", "Breaking News"),
                 asset=asset,
@@ -3310,36 +3376,13 @@ async def high_impact_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             )
             await broadcast(context.bot, text_msg)
             _seen_keys.add(full_key)
+            _seen_keys.add(key)
+            if title_norm:
+                _seen_keys.add(f"title:{title_norm}")
             save_seen_keys(_seen_keys)
             print(f"[HIGH IMPACT NEWS] Text alert sent: {(article.get('title') or '')[:80]}")
     except Exception as exc:
         print(f"[ERROR] High impact news check failed: {exc}")
-
-    try:
-        import forexfactory_calendar as ffcal
-        events = ffcal.get_upcoming_high_impact(hours_ahead=2, target_currencies={"USD"})
-        if events:
-            now = datetime.now(timezone.utc)
-            for ev in events:
-                dt = ev.get("datetime")
-                if not dt:
-                    continue
-                mins_until = int((dt - now).total_seconds() / 60)
-                if mins_until > 90:
-                    continue
-                hour_key = dt.strftime("%Y%m%d_%H%M")
-                cal_key = f"calendar:{hour_key}:{ev['country']}:{ev['title']}"
-                if cal_key in _seen_keys:
-                    continue
-                alert_text = format_calendar_alert_md([ev])
-                if not alert_text:
-                    continue
-                await broadcast(context.bot, alert_text)
-                _seen_keys.add(cal_key)
-                save_seen_keys(_seen_keys)
-                print(f"[CALENDAR] Alert: {ev['title']} ({ev['country']}) in {mins_until}m")
-    except Exception as exc:
-        print(f"[ERROR] Calendar check failed: {exc}")
 
 
 def _signals_yesterday() -> list[dict]:
