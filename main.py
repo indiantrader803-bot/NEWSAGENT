@@ -1323,6 +1323,15 @@ def article_key(article: dict[str, Any]) -> str:
     )
 
 
+def clean_title_for_dedup(title: str) -> str:
+    import re
+    if not title:
+        return ""
+    # Lowercase, keep only alphanumeric, sort the words so word order changes don't bypass checks
+    words = sorted(re.findall(r'[a-z0-9]+', title.lower()))
+    return "".join(words)
+
+
 def normalize_text(article: dict[str, Any]) -> str:
     parts = [
         article.get("title") or "",
@@ -3165,9 +3174,26 @@ async def send_category_article(
         if not key:
             continue
         full_key = f"{category_prefix}:{key}"
-        if full_key in seen_keys:
+        if full_key in seen_keys or key in seen_keys or any(k.endswith(f":{key}") for k in seen_keys):
             continue
         if not is_recent(article):
+            continue
+
+        # Deduplicate similar/repeated titles using word-order-invariant hashes
+        title = article.get("title") or ""
+        title_norm = clean_title_for_dedup(title)
+        if title_norm:
+            title_key = f"title:{title_norm}"
+            if title_key in seen_keys:
+                continue
+
+        # Filter out weak/medium analysis for regular category messages (Must be High confidence and directional)
+        bias = infer_bias_signal(article)
+        text_body = normalize_text(article)
+        direction, confidence = "Neutral", "Low"
+        if bias:
+            direction, confidence = compute_confidence(text_body)
+        if confidence != "High" or direction == "Neutral":
             continue
 
         text = format_func(article)
@@ -3176,6 +3202,9 @@ async def send_category_article(
 
         await broadcast(bot, text)
         seen_keys.add(full_key)
+        seen_keys.add(key)
+        if title_norm:
+            seen_keys.add(title_key)
         save_seen_keys(seen_keys)
         return 1
     return 0

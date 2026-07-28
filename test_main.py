@@ -229,8 +229,7 @@ class BilingualAndStockTests(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_translate_to_bengali_handles_api_error(self):
-        with patch.object(main, "urlopen", side_effect=Exception("Network error")), \
-             patch("deep_translator.GoogleTranslator", side_effect=Exception("API error")):
+        with patch.object(main, "urlopen", side_effect=Exception("Network error")),              patch.object(main, "ai_translate", return_value=None),              patch("deep_translator.GoogleTranslator", side_effect=Exception("API error")):
             result = main.translate_to_bengali("Hello world")
         self.assertIsNone(result)
 
