@@ -45,26 +45,44 @@ async def run_ai_cycle(bot: Bot) -> None:
         __import__("datetime").timezone(__import__("datetime").timedelta(hours=5, minutes=30))
     ).strftime("%H:%M IST")
 
-    # BTC market update every cycle
-    try:
-        btc_update = ai_agent.generate_btc_market_update()
-        if btc_update:
-            block = ai_agent.format_btc_market_update(btc_update)
-            await broadcast(bot, block)
-            print(f"[AI] BTC market update sent at {time_str}")
-    except Exception as e:
-        print(f"[AI] BTC update failed: {e}")
-
-    # BTC trade suggestion every 2nd cycle
-    if cycle % 2 == 0:
+    # Rotate assets for AI market update once every 8 cycles (every 2 hours) to avoid BTC spamming
+    if cycle % 8 == 0:
+        assets = ["EUR/USD", "XAU/USD", "US100", "BTC/USD"]
+        asset = assets[(cycle // 8) % len(assets)]
         try:
-            btc_sug = ai_agent.generate_btc_trade_suggestion()
-            if btc_sug:
-                block = ai_agent.format_btc_signal_block(btc_sug)
-                await broadcast(bot, block)
-                print(f"[AI] BTC trade suggestion sent at {time_str}")
+            prices = fetch_current_prices()
+            price = prices.get(asset)
+            ai_update = ai_agent.generate_asset_market_update(asset, prices)
+            if ai_update:
+                block = ai_agent.format_asset_market_update(asset, ai_update, price)
+                if block:
+                    await broadcast(bot, block)
+                    print(f"[AI] {asset} market update sent at {time_str}")
         except Exception as e:
-            print(f"[AI] BTC suggestion failed: {e}")
+            print(f"[AI] {asset} update failed: {e}")
+
+    # Generate rotating trade suggestions every 12 cycles (every 3 hours)
+    if cycle % 12 == 0:
+        assets_sug = ["EUR/USD", "XAU/USD", "US100", "BTC/USD"]
+        asset = assets_sug[(cycle // 12) % len(assets_sug)]
+        try:
+            if asset == "BTC/USD":
+                btc_sug = ai_agent.generate_btc_trade_suggestion()
+                if btc_sug:
+                    block = ai_agent.format_btc_signal_block(btc_sug)
+                    await broadcast(bot, block)
+                    print(f"[AI] BTC trade suggestion sent at {time_str}")
+            else:
+                prices = fetch_current_prices()
+                price = prices.get(asset)
+                ai_update = ai_agent.generate_asset_market_update(asset, prices)
+                if ai_update:
+                    block = ai_agent.format_asset_market_update(asset, ai_update, price)
+                    if block:
+                        await broadcast(bot, block)
+                        print(f"[AI] {asset} trade suggestion sent at {time_str}")
+        except Exception as e:
+            print(f"[AI] {asset} trade suggestion failed: {e}")
 
     # Educational tip every 6 cycles
     if cycle % 6 == 0:

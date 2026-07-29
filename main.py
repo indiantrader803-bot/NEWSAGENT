@@ -3413,6 +3413,33 @@ async def high_impact_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     except Exception as exc:
         print(f"[ERROR] High impact news check failed: {exc}")
 
+    # Check Forex Factory Economic Calendar for high impact releases
+    try:
+        import forexfactory_calendar as ffcal
+        events = ffcal.get_upcoming_high_impact(hours_ahead=1, target_currencies={"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "NZD", "INR"})
+        if events:
+            now = datetime.now(timezone.utc)
+            for ev in events:
+                dt = ev.get("datetime")
+                if not dt:
+                    continue
+                mins_until = int((dt - now).total_seconds() / 60)
+                # Alert when event is 10-35 minutes away
+                if 10 <= mins_until <= 35:
+                    cal_key = f"cal_trade:{ev['country']}:{ev['title']}:{dt.strftime('%Y%m%d_%H%M')}"
+                    if cal_key in _seen_keys:
+                        continue
+                    
+                    # Generate AI scenarios trade setup
+                    alert_text = ai_agent.generate_calendar_trade_setup(ev)
+                    if alert_text:
+                        await broadcast(context.bot, alert_text)
+                        _seen_keys.add(cal_key)
+                        save_seen_keys(_seen_keys)
+                        print(f"[CALENDAR TRADE] Setup generated and sent for {ev['title']} ({ev['country']})")
+    except Exception as e:
+        print(f"[ERROR] Economic calendar checking failed: {e}")
+
 
 def _signals_yesterday() -> list[dict]:
     yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")

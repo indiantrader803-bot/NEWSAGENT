@@ -477,5 +477,221 @@ def format_btc_market_update(ai_output: str, btc_price: float | None = None) -> 
     return "\n".join(parts)
 
 
+def build_premium_asset_card(asset: str, signal: str, price: float | None, news_items: list[str], trade_setup: str, risk_note: str) -> str:
+    """Build a premium-looking asset Telegram card for live broadcasts."""
+    headline_block = "\n".join(f"• {item[:110]}" for item in news_items[:3]) if news_items else f"• No fresh {asset} headlines detected"
+    
+    if "INR" in asset or asset in ["NIFTY", "SENSEX", "RELIANCE", "TCS", "HDFC"]:
+        price_str = f"₹{price:,.2f}" if price is not None else "Live"
+    elif asset in ["XAU/USD", "EUR/USD", "GBP/USD", "BTC/USD", "ETH/USD", "US100"]:
+        price_str = f"${price:,.4f}" if price is not None and price < 5 else (f"${price:,.2f}" if price is not None else "Live")
+    else:
+        price_str = f"{price}" if price is not None else "Live"
+
+    asset_display = {
+        "BTC/USD": "₿ BTC/USD — News-Backed BTC Trade Insight",
+        "XAU/USD": "🏆 Gold (XAU/USD) — Macro Strategy Insight",
+        "EUR/USD": "💶 EUR/USD — Forex Market Insight",
+        "US100": "📈 NASDAQ (US100) — Tech Market Insight",
+    }.get(asset, f"📊 {asset} — Market Insight")
+
+    return "\n".join([
+        asset_display,
+        "━━━━━━━━━━━━━━━━━━",
+        f"🟢 Signal: {signal}",
+        f"💰 Price: {price_str}",
+        "",
+        "🎯 Trade Setup",
+        trade_setup or "Monitor structure and wait for confirmation.",
+        "",
+        "🛡️ Risk Control",
+        risk_note or "Risk 1-2% and scale only after confirmation.",
+        "",
+        "📰 Verified news",
+        headline_block,
+        "",
+        "⚠️ Not financial advice. Trade at your own risk.",
+    ])
+
+
+def generate_asset_market_update(asset: str, prices: dict | None = None) -> str | None:
+    """Generate a dedicated market update for a specific asset with news-backed guidance."""
+    asset_query_map = {
+        "BTC/USD": ("Bitcoin crypto ETF regulation", "crypto market analyst"),
+        "XAU/USD": ("Gold commodity inflation fed interest rates", "precious metals strategy analyst"),
+        "EUR/USD": ("EURUSD forex ECB Fed interest rates economic data", "forex currency analyst"),
+        "US100": ("Nasdaq tech stocks inflation fed corporate earnings", "stock index strategy analyst")
+    }
+    query, analyst_role = asset_query_map.get(asset, (f"{asset} financial news", "market analyst"))
+
+    price = None
+    if prices:
+        price = prices.get(asset)
+    elif asset == "BTC/USD":
+        try:
+            import main
+            price = main.fetch_current_prices().get("BTC/USD")
+        except Exception:
+            pass
+
+    price_ctx = ""
+    if price:
+        price_ctx = f"{asset} is currently at {price}."
+
+    news_context = ""
+    try:
+        import main
+        articles = main.fetch_latest_articles(query)
+        asset_news = []
+        keywords = asset.lower().split("/") + query.lower().split()
+        for article in articles[:8]:
+            title = (article.get("title") or article.get("headline") or "").strip()
+            if title:
+                text = f"{title} {article.get('description') or ''}".lower()
+                if any(k in text for k in keywords):
+                    asset_news.append(article)
+            if len(asset_news) >= 3:
+                break
+        if not asset_news and articles:
+            asset_news = articles[:3]
+        news_context = _extract_news_context(asset_news)
+    except Exception:
+        news_context = ""
+
+    prompt = (
+        f"You are a professional {analyst_role}. Generate a {asset} market update that is grounded in recent verified news rather than generic hype.\n\n"
+        f"{price_ctx}\n\n"
+        f"{news_context}\n\n"
+        "Structure your response EXACTLY like this:\n"
+        "SIGNAL|<direction (BULLISH/BEARISH/NEUTRAL)>\n"
+        "ANALYSIS|<1-2 sentences on market conditions with evidence from recent news>\n"
+        "KEY_LEVEL|<key price level to watch>\n"
+        "NEWS|<3 short bullet-style points that mention concrete recent news cues>\n"
+        "TRADE|<one-sentence trade setup with entry/target/risk logic>\n"
+        "RISK|<one sentence on risk management>\n\n"
+        "Be factual, evidence-based, and concise."
+    )
+    return _best_ai(prompt, f"You are a professional {analyst_role}.")
+
+
+def format_asset_market_update(asset: str, ai_output: str, price: float | None = None) -> str | None:
+    """Format asset market update into a Telegram message with a news-backed structure."""
+    if not ai_output:
+        return None
+
+    lines = ai_output.strip().split("\n")
+    signal = ""
+    analysis = ""
+    key_level = ""
+    news_items: list[str] = []
+    trade_setup = ""
+    risk_note = ""
+
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith("SIGNAL|"):
+            signal = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("ANALYSIS|"):
+            analysis = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("KEY_LEVEL|"):
+            key_level = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("NEWS|"):
+            raw = line.split("|", 1)[-1].strip()
+            if raw:
+                parts = []
+                for part in raw.replace("•", "\n").splitlines():
+                    cleaned = part.strip(" •-")
+                    if cleaned:
+                        parts.append(cleaned)
+                news_items.extend(parts)
+        elif line.upper().startswith("TRADE|"):
+            trade_setup = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("RISK|"):
+            risk_note = line.split("|", 1)[-1].strip()
+
+    if not signal and not analysis:
+        return None
+
+    return build_premium_asset_card(
+        asset=asset,
+        signal=signal or "Neutral",
+        price=price,
+        news_items=news_items,
+        trade_setup=trade_setup or f"Key level: {key_level or 'monitor'}",
+        risk_note=risk_note or "Risk 1-2% and scale only after confirmation.",
+    )
+
+
+def generate_calendar_trade_setup(event: dict) -> str | None:
+    """Generate a high-probability trade setup scenario matrix based on upcoming calendar release forecast and previous metrics."""
+    title = event.get("title", "")
+    country = event.get("country", "").upper()
+    forecast = event.get("forecast", "N/A")
+    previous = event.get("previous", "N/A")
+    
+    pairs_map = {
+        "USD": "EUR/USD",
+        "EUR": "EUR/USD",
+        "GBP": "GBP/USD",
+        "JPY": "USD/JPY",
+        "AUD": "AUD/USD",
+        "CAD": "USD/CAD",
+        "CHF": "USD/CHF",
+        "NZD": "NZD/USD",
+        "INR": "USD/INR",
+    }
+    pair = pairs_map.get(country, "EUR/USD")
+    
+    prompt = (
+        f"You are a professional macroeconomic strategist. Provide a pre-release scenario matrix and high-probability trade setups for {pair} based on this upcoming news event:\n"
+        f"Event: {title} ({country})\n"
+        f"Forecast: {forecast} | Previous: {previous}\n\n"
+        f"Draft a clear trade setup for two outcomes:\n"
+        f"1. Better-Than-Expected Release: Direction (BUY/SELL) for {pair}, suggested Entry/TP/SL, and 1-sentence logic.\n"
+        f"2. Worse-Than-Expected Release: Direction (BUY/SELL) for {pair}, suggested Entry/TP/SL, and 1-sentence logic.\n\n"
+        "Structure the output exactly like this:\n"
+        "EVENT| <event title>\n"
+        "SCENARIO_BETTER| Direction: <BUY/SELL> | Entry: <price> | TP: <price> | SL: <price> | Logic: <reasoning>\n"
+        "SCENARIO_WORSE| Direction: <BUY/SELL> | Entry: <price> | TP: <price> | SL: <price> | Logic: <reasoning>\n"
+        "RISK| <1 sentence risk management note>"
+    )
+    
+    ai_out = _best_ai(prompt, "You are a professional macroeconomic strategy analyst.")
+    if not ai_out:
+        return None
+        
+    lines = ai_out.strip().split("\n")
+    s_better = s_worse = r_note = ""
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith("SCENARIO_BETTER|"):
+            s_better = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("SCENARIO_WORSE|"):
+            s_worse = line.split("|", 1)[-1].strip()
+        elif line.upper().startswith("RISK|"):
+            r_note = line.split("|", 1)[-1].strip()
+            
+    if not s_better and not s_worse:
+        return None
+        
+    return "\n".join([
+        f"📅 *HIGH IMPACT EVENT SIGNALS*",
+        f"━━━━━━━━━━━━━━━━━━",
+        f"📢 *Event:* {title} ({country})",
+        f"📊 *Forecast:* {forecast}  ·  *Previous:* {previous}",
+        f"💿 *Trade Pair:* {pair}",
+        f"",
+        f"🟢 *Scenario 1 (Better Outcome):*",
+        s_better or "Monitor release and trade directionally.",
+        f"",
+        f"🔴 *Scenario 2 (Worse Outcome):*",
+        s_worse or "Monitor release and trade directionally.",
+        f"",
+        f"🛡️ *Risk Note:* {r_note or 'Keep leverage low before release volatility.'}",
+        f"━━━━━━━━━━━━━━━━━━",
+        f"🔖 #forexfactory #macro #{country} #{pair.replace('/', '')}",
+    ])
+
+
 if __name__ == "__main__":
     print("AI Agent module loaded. Used by main.py for message enhancement.")
