@@ -2329,38 +2329,62 @@ def load_newsapi_articles(payload: dict[str, Any]) -> list[dict[str, Any]]:
     return [normalize_newsapi_article(item) for item in articles if isinstance(item, dict)]
 
 
+_news_cache = {}
+
 def fetch_latest_articles(query: str = FOREX_QUERY) -> list[dict[str, Any]]:
+    global _news_cache
     provider = get_active_provider()
-
-    if provider == "finnhub":
-        categories = ["general", "forex", "crypto", "merger"]
-        all_articles: list[dict] = []
-        for cat in categories:
-            try:
-                articles = finnhub_fetch_news(cat)
-                all_articles.extend(articles)
-            except Exception:
-                pass
-        seen = set()
-        unique = []
-        for a in all_articles:
-            k = article_key(a)
-            if k and k not in seen:
-                seen.add(k)
-                unique.append(a)
-        return unique + fetch_live_market_news()
-
-    url = build_newsapi_url(query) if provider == "newsapi" else build_newsdata_url(query)
-    with urlopen(url, timeout=30) as response:
-        payload = json.load(response)
-
-    if provider == "newsapi":
-        api_articles = load_newsapi_articles(payload)
-    else:
-        api_articles = load_newsdata_articles(payload)
+    
+    # Check cache first for API calls (RSS is always live)
+    now = datetime.now()
+    cache_key = f"{provider}:{query}"
+    cached_api_articles = []
+    
+    if cache_key in _news_cache:
+        timestamp, api_articles = _news_cache[cache_key]
+        if (now - timestamp).total_seconds() < 600: # Cache API results for 10 minutes
+            cached_api_articles = api_articles
+            
+    if not cached_api_articles:
+        try:
+            if provider == "finnhub":
+                categories = ["general", "forex", "crypto", "merger"]
+                all_articles: list[dict] = []
+                for cat in categories:
+                    try:
+                        articles = finnhub_fetch_news(cat)
+                        all_articles.extend(articles)
+                    except Exception:
+                        pass
+                seen = set()
+                unique = []
+                for a in all_articles:
+                    k = article_key(a)
+                    if k and k not in seen:
+                        seen.add(k)
+                        unique.append(a)
+                cached_api_articles = unique
+            else:
+                url = build_newsapi_url(query) if provider == "newsapi" else build_newsdata_url(query)
+                with urlopen(url, timeout=30) as response:
+                    payload = json.load(response)
+                if provider == "newsapi":
+                    cached_api_articles = load_newsapi_articles(payload)
+                else:
+                    cached_api_articles = load_newsdata_articles(payload)
+            
+            # Save to cache
+            _news_cache[cache_key] = (now, cached_api_articles)
+        except Exception as e:
+            print(f"[FETCH NEWS] API request failed: {e}")
+            # If failed, reuse expired cache if available
+            if cache_key in _news_cache:
+                cached_api_articles = _news_cache[cache_key][1]
+            else:
+                cached_api_articles = []
 
     live_articles = fetch_live_market_news()
-    combined = api_articles + live_articles
+    combined = cached_api_articles + live_articles
     seen = set()
     unique = []
     for article in combined:
