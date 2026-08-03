@@ -3457,6 +3457,78 @@ def _build_signal_results_block(signals: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def scrape_holidays_monthly() -> None:
+    """Scrapes exchange holidays for the current and next month, saving to CSV in data/."""
+    try:
+        import os
+        import importlib.util
+        
+        scraper_path = os.path.join(os.path.dirname(__file__), "economic_calendar_scraper", "main.py")
+        if not os.path.exists(scraper_path):
+            print(f"[HOLIDAY SCRAPER] Path does not exist: {scraper_path}")
+            return
+            
+        spec = importlib.util.spec_from_file_location("scraper_main", scraper_path)
+        scraper_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(scraper_module)
+        
+        # Ensure 'data' directory exists
+        os.makedirs("data", exist_ok=True)
+        
+        month_list = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        now = datetime.now()
+        months_to_scrape = [now, now + timedelta(days=31)]
+        
+        for dt in months_to_scrape:
+            month_str = month_list[dt.month - 1]
+            filepath = f"data/{month_str}_calendar.csv"
+            
+            # Scrape using the imported module
+            df = scraper_module.scraper(month_str)
+            if df is not None and not df.empty:
+                # Filter exchanges using the scraper's built-in exchange filter list
+                filtered_df = df[df['Exchange Name'].isin(scraper_module.exchange_filter)]
+                filtered_df.to_csv(filepath, index=False)
+                print(f"[HOLIDAY SCRAPER] Saved holiday data to {filepath}")
+    except Exception as e:
+        print(f"[HOLIDAY SCRAPER] Scraping failed: {e}")
+
+
+def check_holidays_today() -> list[str]:
+    """Check if today is a holiday for any major stock exchanges."""
+    holidays = []
+    try:
+        import os
+        month_list = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        now = datetime.now()
+        month_str = month_list[now.month - 1]
+        filepath = f"data/{month_str}_calendar.csv"
+        
+        if os.path.exists(filepath):
+            import pandas as pd
+            df = pd.read_csv(filepath)
+            today_str = now.strftime('%d.%m.%Y')
+            
+            # Match columns from scraped CSV: Date, Country, Exchange Name, Holiday Name
+            date_col = df.columns[0]
+            exchange_col = df.columns[2]
+            holiday_col = df.columns[3]
+            
+            today_df = df[df[date_col] == today_str]
+            for _, row in today_df.iterrows():
+                exchange = row[exchange_col]
+                holiday_name = row[holiday_col]
+                holidays.append(f"🔔 *Exchange Holiday:* {exchange} is closed today for *{holiday_name}*.")
+    except Exception as e:
+        print(f"[HOLIDAY CHECK] Failed to check holidays: {e}")
+    return holidays
+
+
+async def scrape_holidays_monthly_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """JobQueue adapter for monthly holiday scraping."""
+    scrape_holidays_monthly()
+
+
 async def morning_briefing_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Template 4 — Morning market briefing (text, English only)."""
     try:
@@ -3794,6 +3866,9 @@ async def worker_loop() -> None:
         print("[REALTIME] Finnhub WebSocket listener started.")
     except Exception as e:
         print(f"[REALTIME] WebSocket thread failed: {e}")
+
+    # ── Monthly holiday scraping (runs every 7 days, first time after 15s) ──
+    jq.run_repeating(scrape_holidays_monthly_job, interval=86400 * 7, first=15)
 
     # ── Regular news broadcast & high-impact monitoring ───────────────────────
     jq.run_repeating(news_broadcast_job,      interval=FETCH_INTERVAL_SECONDS,       first=10)
