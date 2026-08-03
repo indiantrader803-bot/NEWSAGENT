@@ -3143,8 +3143,11 @@ def try_render_text_to_card(text: str) -> Any:
         
         lines = [line.strip() for line in text.split("\n") if line.strip()]
         
-        # --- Template 1: Trade Signal ---
-        if any("TradeSignal Pro" in line for line in lines[:3]) and any("Stop Loss" in line for line in lines):
+        # --- Template 1: Trade Signal / AI Trade Setup ---
+        is_signal = any("TradeSignal Pro" in line for line in lines[:3]) and any("Stop Loss" in line for line in lines)
+        is_trade_setup = any("AI TRADE SETUP" in line for line in lines)
+        
+        if is_signal or is_trade_setup:
             header_line = ""
             for line in lines:
                 if "·" in line and any(kw in line.upper() for kw in ["BUY", "SELL", "LONG", "SHORT"]):
@@ -3164,6 +3167,20 @@ def try_render_text_to_card(text: str) -> Any:
                 if len(parts) >= 3:
                     timeframe = parts[2]
             
+            if is_trade_setup:
+                for line in lines:
+                    if "AI TRADE SETUP" in line:
+                        direction = "BUY" if "BUY" in line.upper() else "SELL"
+                        break
+                for line in lines:
+                    if "Asset:" in line:
+                        clean_line = line.replace("*", "").replace("🌍 Asset:", "").strip()
+                        parts = [p.strip() for p in clean_line.split("·")]
+                        pair = parts[0]
+                        if len(pair) == 6 and "/" not in pair:
+                            pair = f"{pair[:3]}/{pair[3:]}"
+                        break
+            
             instrument_name = INSTRUMENT_NAMES.get(pair, pair)
             for line in lines:
                 if line.startswith("_") and line.endswith("_"):
@@ -3182,23 +3199,24 @@ def try_render_text_to_card(text: str) -> Any:
             reason = "Market analysis trigger."
             
             for line in lines:
-                if "Entry:" in line:
-                    entry = line.split("Entry:")[1].strip()
-                elif "Stop Loss:" in line:
-                    parts = line.split("Stop Loss:")[1].strip().split()
+                clean_line = line.replace("*", "")
+                if "Entry:" in clean_line:
+                    entry = clean_line.split("Entry:")[1].strip()
+                elif "Stop Loss:" in clean_line:
+                    parts = clean_line.split("Stop Loss:")[1].strip().split()
                     sl = parts[0]
                     sl_diff = parts[1].strip("(-)") if len(parts) > 1 else "0"
-                elif "TP 1:" in line:
-                    parts = line.split("TP 1:")[1].strip().split()
+                elif "TP 1:" in clean_line:
+                    parts = clean_line.split("TP 1:")[1].strip().split()
                     tp1 = parts[0]
                     tp1_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
-                elif "TP 2:" in line:
-                    parts = line.split("TP 2:")[1].strip().split()
+                elif "TP 2:" in clean_line:
+                    parts = clean_line.split("TP 2:")[1].strip().split()
                     tp2 = parts[0]
                     tp2_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
-                elif "Risk:Reward:" in line or "Risk : Reward:" in line:
-                    label = "Risk:Reward:" if "Risk:Reward:" in line else "Risk : Reward:"
-                    rr = line.split(label)[1].strip().replace("1 :", "").strip()
+                elif "Risk:Reward:" in clean_line or "Risk : Reward:" in clean_line:
+                    label = "Risk:Reward:" if "Risk:Reward:" in clean_line else "Risk : Reward:"
+                    rr = clean_line.split(label)[1].strip().replace("1 :", "").strip()
                 elif "Confidence:" in line:
                     match = re.search(r'\d+', line)
                     if match:
