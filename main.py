@@ -3133,12 +3133,274 @@ def _init_bot3() -> Bot | None:
     return _bot3_instance
 
 
+def try_render_text_to_card(text: str) -> Any:
+    """Detects text type and tries to parse and render it as a visual card image."""
+    try:
+        import re
+        from datetime import datetime
+        import telegram_templates as tt
+        from PIL import Image
+        
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+        
+        # --- Template 1: Trade Signal ---
+        if any("TradeSignal Pro" in line for line in lines[:3]) and any("Stop Loss" in line for line in lines):
+            header_line = ""
+            for line in lines:
+                if "·" in line and any(kw in line.upper() for kw in ["BUY", "SELL", "LONG", "SHORT"]):
+                    header_line = line
+                    break
+            
+            pair = "XAU/USD"
+            direction = "BUY"
+            timeframe = "H1"
+            if header_line:
+                clean_header = header_line.replace("*", "")
+                parts = [p.strip() for p in clean_header.split("·")]
+                if len(parts) >= 1:
+                    pair = parts[0]
+                if len(parts) >= 2:
+                    direction = "BUY" if "BUY" in parts[1].upper() or "LONG" in parts[1].upper() else "SELL"
+                if len(parts) >= 3:
+                    timeframe = parts[2]
+            
+            instrument_name = INSTRUMENT_NAMES.get(pair, pair)
+            for line in lines:
+                if line.startswith("_") and line.endswith("_"):
+                    instrument_name = line.strip("_")
+                    break
+            
+            entry = "0.0"
+            sl = "0.0"
+            sl_diff = "0.0"
+            tp1 = "0.0"
+            tp1_diff = "0.0"
+            tp2 = "0.0"
+            tp2_diff = "0.0"
+            rr = "1.0"
+            confidence = 80
+            reason = "Market analysis trigger."
+            
+            for line in lines:
+                if "Entry:" in line:
+                    entry = line.split("Entry:")[1].strip()
+                elif "Stop Loss:" in line:
+                    parts = line.split("Stop Loss:")[1].strip().split()
+                    sl = parts[0]
+                    sl_diff = parts[1].strip("(-)") if len(parts) > 1 else "0"
+                elif "TP 1:" in line:
+                    parts = line.split("TP 1:")[1].strip().split()
+                    tp1 = parts[0]
+                    tp1_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
+                elif "TP 2:" in line:
+                    parts = line.split("TP 2:")[1].strip().split()
+                    tp2 = parts[0]
+                    tp2_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
+                elif "Risk:Reward:" in line or "Risk : Reward:" in line:
+                    label = "Risk:Reward:" if "Risk:Reward:" in line else "Risk : Reward:"
+                    rr = line.split(label)[1].strip().replace("1 :", "").strip()
+                elif "Confidence:" in line:
+                    match = re.search(r'\d+', line)
+                    if match:
+                        confidence = int(match.group())
+                elif "Reason:" in line:
+                    reason = line.split("Reason:")[1].strip()
+            
+            tags = ["signal", "forex", pair.lower().replace("/", "")]
+            for line in lines:
+                if line.startswith("🔖"):
+                    tags = [t.strip("# ") for t in line.split() if t.strip() and not t.startswith("🔖")]
+            
+            return tt.make_signal_card(
+                pair=pair, instrument_name=instrument_name, direction=direction,
+                entry=entry, sl=sl, sl_diff=sl_diff, tp1=tp1, tp1_diff=tp1_diff,
+                tp2=tp2, tp2_diff=tp2_diff, rr=rr, confidence=confidence,
+                reason=reason, tags=tags, timeframe=timeframe
+            )
+
+        # --- Template 2: Breaking News Alert ---
+        elif "BREAKING NEWS ALERT" in text or "📰 *BREAKING" in text:
+            title = "Breaking News Alert"
+            header_idx = -1
+            for i, line in enumerate(lines):
+                if "BREAKING" in line:
+                    header_idx = i
+                    break
+            
+            if header_idx != -1 and header_idx + 1 < len(lines):
+                # Title is usually the next line
+                title = lines[header_idx + 1].replace("*", "")
+                
+            asset = "Global Market"
+            date_str = datetime.now().strftime("%d %b %Y")
+            for line in lines:
+                if "Asset:" in line:
+                    clean_line = line.replace("*", "").replace("🌍 Asset:", "").strip()
+                    parts = [p.strip() for p in clean_line.split("·")]
+                    asset = parts[0]
+                    if len(parts) > 1:
+                        date_str = " · ".join(parts[1:])
+                        
+            direction = "Neutral"
+            for line in lines:
+                if "Impact:" in line:
+                    direction = "Bullish" if "Bullish" in line else "Bearish" if "Bearish" in line else "Neutral"
+                    
+            confidence_pct = 75
+            for line in lines:
+                if "Confidence:" in line:
+                    match = re.search(r'\d+', line)
+                    if match:
+                        confidence_pct = int(match.group())
+                        
+            analysis = "Macro economic breaking news update."
+            for i, line in enumerate(lines):
+                if "Quick Analysis:" in line and i + 1 < len(lines):
+                    analysis = lines[i + 1]
+                    
+            tags = ["breaking", "news", asset.lower()]
+            for line in lines:
+                if line.startswith("🔖"):
+                    tags = [t.strip("# ") for t in line.split() if t.strip() and not t.startswith("🔖")]
+                    
+            return tt.make_news_alert_card(
+                title=title, asset=asset, category="Business", date_str=date_str,
+                direction=direction, confidence_pct=confidence_pct, analysis=analysis, tags=tags
+            )
+
+        # --- Template 3: NSE/Nifty Signal ---
+        elif any(marker in text for marker in ["🇮🇳", "BANKNIFTY", "NIFTY"]):
+            header_line = ""
+            for line in lines:
+                if "🇮🇳" in line:
+                    header_line = line
+                    break
+            
+            index = "NIFTY"
+            asset = "CE"
+            direction = "BUY"
+            if header_line:
+                clean_header = header_line.replace("*", "").replace("🇮🇳", "").strip()
+                parts = [p.strip() for p in clean_header.split("·")]
+                if len(parts) >= 1:
+                    index = parts[0]
+                if len(parts) >= 2:
+                    sub_parts = [sp.strip() for sp in parts[1].split("|")]
+                    asset = sub_parts[0]
+                    if len(sub_parts) > 1:
+                        direction = sub_parts[1]
+            
+            entry = "Premium Zone"
+            sl = "0"
+            sl_diff = "0%"
+            tp1 = "0"
+            tp1_diff = "0%"
+            tp2 = "0"
+            tp2_diff = "0%"
+            analysis = "Indian market trend update."
+            
+            for line in lines:
+                if "Entry" in line:
+                    entry = line.split("Entry")[1].strip("(:) ₹ ")
+                elif "Stop Loss:" in line:
+                    parts = line.split("Stop Loss:")[1].strip("₹ ").split()
+                    sl = parts[0]
+                    sl_diff = parts[1].strip("(-)") if len(parts) > 1 else "0"
+                elif "Target 1:" in line:
+                    parts = line.split("Target 1:")[1].strip("₹ ").split()
+                    tp1 = parts[0]
+                    tp1_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
+                elif "Target 2:" in line:
+                    parts = line.split("Target 2:")[1].strip("₹ ").split()
+                    tp2 = parts[0]
+                    tp2_diff = parts[1].strip("(+)") if len(parts) > 1 else "0"
+                elif "Reason:" in line:
+                    analysis = line.split("Reason:")[1].strip()
+            
+            tags = ["NSE", "options", "India"]
+            for line in lines:
+                if line.startswith("🔖"):
+                    tags = [t.strip("# ") for t in line.split() if t.strip() and not t.startswith("🔖")]
+                    
+            return tt.make_nse_signal_card(
+                index=index, asset=asset, direction=direction, entry=entry,
+                sl=sl, sl_diff=sl_diff, tp1=tp1, tp1_diff=tp1_diff,
+                tp2=tp2, tp2_diff=tp2_diff, analysis=analysis, tags=tags, exchange="NSE"
+            )
+
+        # --- Template 4: Morning Market Briefing ---
+        elif "Market Briefing" in text or "🌅" in text:
+            date_str = datetime.now().strftime("%d %B %Y")
+            for line in lines:
+                if "Briefing" in line:
+                    date_str = line.split("—")[-1].strip().replace("*", "")
+            
+            signals = []
+            events = []
+            overview = "Trade light before major economic event data releases."
+            
+            in_signals = False
+            in_events = False
+            in_overview = False
+            for line in lines:
+                if "Yesterday's Signals" in line:
+                    in_signals = True
+                    in_events = False
+                    in_overview = False
+                    continue
+                elif "Key Events Today" in line:
+                    in_signals = False
+                    in_events = True
+                    in_overview = False
+                    continue
+                elif "Market Overview" in line:
+                    in_signals = False
+                    in_events = False
+                    in_overview = True
+                    continue
+                
+                if in_signals:
+                    icon = "🟢" if "🟢" in line or "BUY" in line or "LONG" in line else "🔴"
+                    clean_s = line.replace("🟢", "").replace("🔴", "").strip()
+                    parts = clean_s.split("—")
+                    pair = parts[0].strip()
+                    res = parts[1].strip() if len(parts) > 1 else "OPEN"
+                    signals.append({"pair": pair, "result": res, "up": "🟢" in line})
+                elif in_events:
+                    match_time = re.search(r'\b\d+:\d+\s*(?:AM|PM|am|pm)?\b', line)
+                    t_str = match_time.group() if match_time else "All Day"
+                    clean_ev = line.replace(t_str, "").strip("— ").replace("🔴", "").replace("🟡", "").strip()
+                    impact = "HIGH" if "HIGH" in line or "🔴" in line else "MED"
+                    events.append({"time": t_str, "name": clean_ev, "impact": impact})
+                elif in_overview:
+                    if not line.startswith("🔖"):
+                        overview = line
+            
+            return tt.make_morning_briefing_card(
+                date_str=date_str, signals=signals, events=events, overview=overview
+            )
+
+    except Exception as e:
+        print(f"[RENDER CARD] Error parsing or rendering template: {e}")
+    return None
+
+
 async def broadcast(bot: Bot, text: str, parse_mode: str = "Markdown", disable_web_page_preview: bool = True) -> int:
     global _subscribers
     sent = 0
     targets: list[int | str] = list(_subscribers)
     if TELEGRAM_CHAT_ID:
         targets.insert(0, TELEGRAM_CHAT_ID)
+
+    # Attempt to render the text message into a visual PNG template card
+    import telegram_templates as tt
+    img = try_render_text_to_card(text)
+    photo_buf = None
+    if img is not None:
+        try:
+            photo_buf = tt.img_to_bytes(img)
+        except Exception as e:
+            print(f"[BROADCAST] Image card buffering failed: {e}")
 
     bots = [bot]
     bot2 = _init_bot2()
@@ -3158,12 +3420,23 @@ async def broadcast(bot: Bot, text: str, parse_mode: str = "Markdown", disable_w
                 continue
             seen_cids.add(cid)
             try:
-                await b.send_message(
-                    chat_id=cid,
-                    text=text,
-                    parse_mode=parse_mode,
-                    disable_web_page_preview=disable_web_page_preview,
-                )
+                if photo_buf is not None:
+                    # Send visual card with text caption
+                    photo_buf.seek(0)
+                    await b.send_photo(
+                        chat_id=cid,
+                        photo=photo_buf,
+                        caption=text[:1024],  # 1024 character caption limit
+                        parse_mode=parse_mode,
+                    )
+                else:
+                    # Fallback to standard text message
+                    await b.send_message(
+                        chat_id=cid,
+                        text=text,
+                        parse_mode=parse_mode,
+                        disable_web_page_preview=disable_web_page_preview,
+                    )
                 sent += 1
             except Exception as exc:
                 err_str = str(exc).lower()
@@ -3176,8 +3449,6 @@ async def broadcast(bot: Bot, text: str, parse_mode: str = "Markdown", disable_w
                     label = "bot3" if bot3 and b is bot3 else "bot2" if bot2 and b is bot2 else "bot1"
                     print(f"[BROADCAST] Failed to send via {label} to {cid}: {exc}")
     return sent
-
-
 async def send_category_article(
     bot: Bot,
     articles: list[dict[str, Any]],

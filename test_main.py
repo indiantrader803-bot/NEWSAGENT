@@ -377,7 +377,7 @@ class AsyncWorkerTests(unittest.IsolatedAsyncioTestCase):
             sent = await main.send_category_article(bot, articles, seen_keys, "forex", main.format_forex_message)
 
         self.assertEqual(sent, 1)
-        self.assertEqual(bot.send_message.await_count, 1)
+        self.assertEqual(bot.send_message.await_count + bot.send_photo.await_count, 1)
         self.assertIn("forex:1", seen_keys)
 
     async def test_send_category_article_skips_seen_keys(self):
@@ -391,7 +391,7 @@ class AsyncWorkerTests(unittest.IsolatedAsyncioTestCase):
         sent = await main.send_category_article(bot, articles, seen_keys, "forex", main.format_forex_message)
 
         self.assertEqual(sent, 0)
-        self.assertEqual(bot.send_message.await_count, 0)
+        self.assertEqual(bot.send_message.await_count + bot.send_photo.await_count, 0)
 
     async def test_run_worker_cycle_sends_forex_and_india_messages(self):
         bot = AsyncMock()
@@ -408,7 +408,7 @@ class AsyncWorkerTests(unittest.IsolatedAsyncioTestCase):
             sent = await main.run_worker_cycle(bot, seen_keys)
 
         self.assertGreaterEqual(sent, 1)
-        self.assertGreaterEqual(bot.send_message.await_count, 1)
+        self.assertGreaterEqual(bot.send_message.await_count + bot.send_photo.await_count, 1)
 
 
 class MainTests(unittest.TestCase):
