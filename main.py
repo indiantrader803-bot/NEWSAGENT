@@ -35,13 +35,20 @@ MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY", "").strip()
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 NEWSDATA_API_URL = "https://newsdata.io/api/1/latest"
-NEWSAPI_URL = "https://newsapi.org/v2/everything"
+NEWSAPI_URL = "https://newsapi.org/v2/top-headlines"
 FINNHUB_BASE = "https://finnhub.io/api/v1"
 NEWS_PROVIDER = os.getenv("NEWS_PROVIDER", "auto").strip().lower()
 FETCH_INTERVAL_SECONDS = int(os.getenv("FETCH_INTERVAL_SECONDS", "900"))
 HIGH_IMPACT_CHECK_INTERVAL = int(os.getenv("HIGH_IMPACT_CHECK_INTERVAL", "60"))
 LIVE_NEWS_ENABLED = os.getenv("LIVE_NEWS_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 LIVE_NEWS_FEEDS = [item.strip() for item in os.getenv("LIVE_NEWS_FEEDS", "").split(",") if item.strip()]
+if not LIVE_NEWS_FEEDS:
+    LIVE_NEWS_FEEDS = [
+        "https://feeds.feedburner.com/forexcom",
+        "https://www.investing.com/rss/news_1.rss",
+        "https://www.forexlive.com/Feed/News",
+        "https://finance.yahoo.com/news/rss"
+    ]
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
 TWITTER_USERNAMES = [item.strip() for item in os.getenv("TWITTER_USERNAMES", "reuters,investingcom,fxstreet,stocktwits,benzinga").split(",") if item.strip()]
 TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "forex crypto stocks india market").strip()
@@ -1062,13 +1069,22 @@ def build_newsdata_url(query: str) -> str:
 
 
 def build_newsapi_url(query: str) -> str:
+    # Use top-headlines to get real-time news (everything endpoint has a 24-hour delay on NewsAPI free plan)
+    # Simplify the query since top-headlines has stricter keyword matching
+    simple_query = ""
+    keywords = re.findall(r'\b[a-zA-Z]{3,}\b', query)
+    if keywords:
+        simple_query = " ".join(keywords[:3])
+        
     params = {
         "apiKey": NEWS_API_KEY,
-        "q": query,
         "language": "en",
-        "sortBy": "publishedAt",
+        "category": "business",
         "pageSize": "25",
     }
+    if simple_query:
+        params["q"] = simple_query
+        
     return f"{NEWSAPI_URL}?{urlencode(params)}"
 
 
