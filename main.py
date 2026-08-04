@@ -3522,7 +3522,7 @@ async def send_category_article(
         direction, confidence = "Neutral", "Low"
         if bias:
             direction, confidence = compute_confidence(text_body)
-        if confidence != "High" or direction == "Neutral":
+        if confidence not in {"High", "Medium"} or direction == "Neutral":
             continue
 
         text = format_func(article)
