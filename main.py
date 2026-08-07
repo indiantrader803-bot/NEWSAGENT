@@ -31,6 +31,7 @@ TELEGRAM_CHAT_ID3 = os.getenv("TELEGRAM_CHAT_ID3", "").strip()
 NEWSDATA_API_KEY = os.getenv("NEWSDATA_API_KEY", "").strip()
 NEWS_API_KEY = os.getenv("NEWS_API_KEY", "").strip()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
+ANALYZER_GROQ_API_KEY = os.getenv("ANALYZER_GROQ_API_KEY", "").strip() or GROQ_API_KEY
 MASSIVE_API_KEY = os.getenv("MASSIVE_API_KEY", "").strip()
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "").strip()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
@@ -1701,6 +1702,56 @@ def generate_asset_trade_setup(asset: str, question: str) -> str | None:
         result.append(f"\n<b>AI Verification:</b> {verification}")
 
     return "\n".join(result)
+
+
+def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
+    if not ANALYZER_GROQ_API_KEY:
+        return None
+    import requests
+    messages: list[dict] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    # Try Llama 3.3 70B first
+    try:
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": messages,
+            },
+            timeout=15,
+        )
+        if resp.status_code == 429:
+            raise Exception("Rate limit hit, falling back")
+        resp.raise_for_status()
+        text = resp.json()["choices"][0]["message"]["content"].strip()
+        return escape(text)
+    except Exception:
+        # Fallback to high-rate-limit 8B model
+        try:
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": messages,
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"].strip()
+            return escape(text)
+        except Exception:
+            return None
 
 
 def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
@@ -4261,7 +4312,7 @@ async def handle_health_check(reader, writer):
                     f"Format the output strictly as a JSON object with keys: "
                     f"'direction', 'entry', 'sl', 'tp1', 'tp2', 'confidence', 'reason'."
                 )
-                raw_ai_res = _groq_chat(prompt)
+                raw_ai_res = _analyzer_groq_chat(prompt)
                 if not raw_ai_res:
                     raise Exception("Too Many Requests. Rate limited. Try after a while.")
                 import re
