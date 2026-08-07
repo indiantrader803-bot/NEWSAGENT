@@ -1704,7 +1704,7 @@ def generate_asset_trade_setup(asset: str, question: str) -> str | None:
     return "\n".join(result)
 
 
-def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
+def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode: bool = False) -> str | None:
     if not ANALYZER_GROQ_API_KEY:
         return None
     import requests
@@ -1712,6 +1712,13 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None) -> str | 
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
+
+    payload = {
+        "model": "llama-3.3-70b-versatile",
+        "messages": messages,
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
 
     # Try Llama 3.3 70B first
     try:
@@ -1721,19 +1728,22 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None) -> str | 
                 "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
                 "Content-Type": "application/json",
             },
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": messages,
-            },
+            json=payload,
             timeout=15,
         )
         if resp.status_code == 429:
             raise Exception("Rate limit hit, falling back")
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"].strip()
-        return escape(text)
+        return text if json_mode else escape(text)
     except Exception:
         # Fallback to high-rate-limit 8B model
+        fallback_payload = {
+            "model": "llama-3.1-8b-instant",
+            "messages": messages,
+        }
+        if json_mode:
+            fallback_payload["response_format"] = {"type": "json_object"}
         try:
             resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -1741,15 +1751,12 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None) -> str | 
                     "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": "llama-3.1-8b-instant",
-                    "messages": messages,
-                },
+                json=fallback_payload,
                 timeout=15,
             )
             resp.raise_for_status()
             text = resp.json()["choices"][0]["message"]["content"].strip()
-            return escape(text)
+            return text if json_mode else escape(text)
         except Exception:
             return None
 
@@ -4312,7 +4319,7 @@ async def handle_health_check(reader, writer):
                     f"Format the output strictly as a JSON object with keys: "
                     f"'direction', 'entry', 'sl', 'tp1', 'tp2', 'confidence', 'reason'."
                 )
-                raw_ai_res = _analyzer_groq_chat(prompt)
+                raw_ai_res = _analyzer_groq_chat(prompt, json_mode=True)
                 if not raw_ai_res:
                     raise Exception("Too Many Requests. Rate limited. Try after a while.")
                 import re
