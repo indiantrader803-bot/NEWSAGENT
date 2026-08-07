@@ -4265,7 +4265,8 @@ async def handle_health_check(reader, writer):
                     "time": ev.get("time"),
                     "date": ev.get("date"),
                     "forecast": ev.get("forecast", "N/A"),
-                    "previous": ev.get("previous", "N/A")
+                    "previous": ev.get("previous", "N/A"),
+                    "actual": ev.get("actual", "N/A"),
                 })
             response_body = json.dumps(serializable_events)
         except Exception as e:

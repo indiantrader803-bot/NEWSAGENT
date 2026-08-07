@@ -51,6 +51,7 @@ def fetch_calendar_events() -> list[dict[str, Any]]:
             "impact": (el.findtext("impact") or "Low").strip().lower(),
             "forecast": (el.findtext("forecast") or "N/A").strip(),
             "previous": (el.findtext("previous") or "N/A").strip(),
+            "actual": (el.findtext("actual") or "N/A").strip(),
         }
         event["datetime"] = _parse_time(event["date"], event["time"])
         events.append(event)

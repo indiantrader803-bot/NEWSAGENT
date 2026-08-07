@@ -683,12 +683,13 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Date/Time</th>
+                                <th>Time (UTC)</th>
                                 <th>Currency</th>
                                 <th>Economic Indicator</th>
                                 <th>Impact</th>
                                 <th>Forecast</th>
                                 <th>Previous</th>
+                                <th>Actual</th>
                             </tr>
                         </thead>
                         <tbody id="calendar-container">
@@ -948,49 +949,105 @@
 
         // Load & Filter Economic Calendar Events (matching Forex Factory layout)
         async function loadCalendar() {
+            const container = document.getElementById("calendar-container");
             try {
+                container.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 2rem;">⏳ Loading economic calendar...</td></tr>`;
                 const res = await fetch("/api/calendar");
-                allEvents = await res.json();
+                const data = await res.json();
+                // Handle API-level error
+                if (data && data.error) {
+                    container.innerHTML = `<tr><td colspan="7" style="text-align:center; color: #ef4444; padding: 2rem;">⚠️ ${data.error}</td></tr>`;
+                    return;
+                }
+                allEvents = Array.isArray(data) ? data : [];
                 filterCalendar();
             } catch (e) {
                 console.error("Failed to load calendar:", e);
+                container.innerHTML = `<tr><td colspan="7" style="text-align:center; color: #ef4444; padding: 2rem;">⚠️ Failed to load calendar. Please try again.</td></tr>`;
+            }
+        }
+
+        function formatCalDate(dateStr, timeStr) {
+            try {
+                // dateStr: "08-07-2026", timeStr: "9:15am"
+                const [m, d, y] = dateStr.split("-");
+                const dateObj = new Date(`${y}-${m}-${d}`);
+                const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+                const monNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                return `${dayNames[dateObj.getDay()]} ${monNames[dateObj.getMonth()]} ${d}, ${timeStr}`;
+            } catch(e) {
+                return `${dateStr} ${timeStr}`;
             }
         }
 
         function filterCalendar() {
-            const query = document.getElementById("cal-search").value.trim().toUpperCase();
+            const query = (document.getElementById("cal-search").value || "").trim().toUpperCase();
             const impactFilter = document.getElementById("cal-impact").value;
             const container = document.getElementById("calendar-container");
             container.innerHTML = "";
 
+            if (!allEvents || allEvents.length === 0) {
+                container.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No calendar events available this week.</td></tr>`;
+                return;
+            }
+
             const filtered = allEvents.filter(ev => {
-                const matchQuery = !query || ev.country.includes(query) || ev.title.toUpperCase().includes(query);
-                const matchImpact = impactFilter === 'ALL' || ev.impact.toUpperCase() === impactFilter;
+                if (!ev || !ev.country) return false;
+                const matchQuery = !query || (ev.country || "").includes(query) || (ev.title || "").toUpperCase().includes(query);
+                const matchImpact = impactFilter === 'ALL' || (ev.impact || "").toUpperCase() === impactFilter;
                 return matchQuery && matchImpact;
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No calendar events matching filters.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No events matching your filters.</td></tr>`;
                 return;
             }
 
+            // Group by date
+            const byDate = {};
             filtered.forEach(ev => {
-                const imp = ev.impact.toLowerCase();
-                let badgeClass = "impact-none";
-                if (imp === "high") badgeClass = "impact-high";
-                else if (imp === "medium") badgeClass = "impact-medium";
-                else if (imp === "low") badgeClass = "impact-low";
+                const d = ev.date || "Unknown";
+                if (!byDate[d]) byDate[d] = [];
+                byDate[d].push(ev);
+            });
 
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td style="font-weight: 600;">${ev.date} ${ev.time}</td>
-                    <td style="font-weight: 700; color: var(--neon-accent);">${ev.country}</td>
-                    <td style="font-weight: 600;">${ev.title}</td>
-                    <td><span class="impact-badge ${badgeClass}">${ev.impact}</span></td>
-                    <td style="font-weight: 600;">${ev.forecast}</td>
-                    <td style="font-weight: 600; color: var(--text-muted);">${ev.previous}</td>
-                `;
-                container.appendChild(row);
+            Object.keys(byDate).sort().forEach(dateKey => {
+                // Date separator row
+                const [m, d, y] = (dateKey || "--").split("-");
+                const dateObj = new Date(`${y}-${m}-${d}`);
+                const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+                const monNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+                const dateLabel = isNaN(dateObj) ? dateKey : `${dayNames[dateObj.getDay()]}, ${monNames[dateObj.getMonth()]} ${d}, ${y}`;
+
+                const sepRow = document.createElement("tr");
+                sepRow.innerHTML = `<td colspan="7" style="background: rgba(99,102,241,0.15); color: var(--neon-accent); font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1rem; letter-spacing: 0.05em;">📅 ${dateLabel}</td>`;
+                container.appendChild(sepRow);
+
+                byDate[dateKey].forEach(ev => {
+                    const imp = (ev.impact || "low").toLowerCase();
+                    let badgeClass = "impact-none";
+                    let impIcon = "⚪";
+                    if (imp === "high") { badgeClass = "impact-high"; impIcon = "🔴"; }
+                    else if (imp === "medium") { badgeClass = "impact-medium"; impIcon = "🟡"; }
+                    else if (imp === "low") { badgeClass = "impact-low"; impIcon = "🟢"; }
+                    else if (imp === "holiday") { badgeClass = "impact-none"; impIcon = "📆"; }
+
+                    const forecast = ev.forecast && ev.forecast !== "N/A" ? ev.forecast : "—";
+                    const previous = ev.previous && ev.previous !== "N/A" ? ev.previous : "—";
+                    const actual = ev.actual && ev.actual !== "N/A" ? `<span style="color:#10b981;font-weight:700;">${ev.actual}</span>` : `<span style="color:var(--text-muted);">Pending</span>`;
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td style="font-size:0.82rem; color: var(--text-muted);">${ev.time || "All Day"}</td>
+                        <td style="font-weight: 700; color: var(--neon-accent);">${ev.country || "—"}</td>
+                        <td style="font-weight: 600;">${ev.title || "—"}</td>
+                        <td><span class="impact-badge ${badgeClass}">${impIcon} ${imp}</span></td>
+                        <td style="font-weight: 600; color: var(--secondary-accent);">${forecast}</td>
+                        <td style="font-weight: 600; color: var(--text-muted);">${previous}</td>
+                        <td>${actual}</td>
+                    `;
+                    container.appendChild(row);
+                });
             });
         }
 
