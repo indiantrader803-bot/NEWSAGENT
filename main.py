@@ -4161,12 +4161,101 @@ async def handle_health_check(reader, writer):
     except Exception:
         path = "/"
 
-    if path == "/api/signals":
+    from urllib.parse import urlparse, parse_qs
+    parsed_url = urlparse(path)
+    path_only = parsed_url.path
+    query_params = parse_qs(parsed_url.query)
+
+    if path_only == "/api/signals":
         signals = load_signal_log()
-        signals_subset = list(reversed(signals))[:30]
+        signals_subset = list(reversed(signals))[:50]
         response_body = json.dumps(signals_subset)
         content_type = "application/json"
-    elif path == "/" or path == "/dashboard":
+
+    elif path_only == "/api/calendar":
+        try:
+            import forexfactory_calendar as ffcal
+            events = ffcal.get_upcoming_high_impact(hours_ahead=48)
+            serializable_events = []
+            for ev in events:
+                serializable_events.append({
+                    "title": ev.get("title"),
+                    "country": ev.get("country"),
+                    "impact": ev.get("impact"),
+                    "time": ev.get("time"),
+                    "date": ev.get("date"),
+                    "forecast": ev.get("forecast", "N/A"),
+                    "previous": ev.get("previous", "N/A")
+                })
+            response_body = json.dumps(serializable_events)
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/news":
+        try:
+            articles = fetch_latest_articles()[:20]
+            serializable_articles = []
+            for a in articles:
+                text_body = normalize_text(a)
+                direction, confidence = "Neutral", "Low"
+                bias = infer_bias_signal(a)
+                if bias:
+                    direction, confidence = compute_confidence(text_body)
+                serializable_articles.append({
+                    "title": a.get("title"),
+                    "description": a.get("description"),
+                    "source": a.get("source_name") or a.get("source", "Market Feed"),
+                    "direction": direction,
+                    "confidence": confidence,
+                    "publishedAt": a.get("publishedAt") or a.get("time") or ""
+                })
+            response_body = json.dumps(serializable_articles)
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/analyze":
+        symbol = query_params.get("symbol", [""])[0].strip().upper()
+        if not symbol:
+            response_body = json.dumps({"error": "Symbol parameter is required"})
+        else:
+            try:
+                import yfinance as yf
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="5d")
+                if hist.empty:
+                    raise Exception(f"No price data found for symbol '{symbol}'")
+                current_price = float(hist["Close"].iloc[-1])
+                prev_price = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current_price
+                change = current_price - prev_price
+                change_pct = (change / prev_price) * 100 if prev_price else 0.0
+
+                prompt = (
+                    f"Perform a professional technical analysis for asset {symbol}. "
+                    f"Current Price: {current_price:.2f}, Daily Change: {change_pct:+.2f}%. "
+                    f"Generate a clear trade suggestion: Direction (BUY or SELL or NEUTRAL), "
+                    f"Entry Price, Stop Loss, Target 1, Target 2, Confidence level (e.g. 85%), and a 1-sentence analysis reason. "
+                    f"Format the output strictly as a JSON object with keys: "
+                    f"'direction', 'entry', 'sl', 'tp1', 'tp2', 'confidence', 'reason'."
+                )
+                raw_ai_res = _groq_chat(prompt)
+                import re
+                json_match = re.search(r'\{.*\}', raw_ai_res, re.DOTALL)
+                if json_match:
+                    ai_data = json.loads(json_match.group())
+                else:
+                    raise Exception("AI did not return a valid JSON response format")
+
+                ai_data["symbol"] = symbol
+                ai_data["current_price"] = f"{current_price:.2f}"
+                ai_data["change_pct"] = f"{change_pct:+.2f}%"
+                response_body = json.dumps(ai_data)
+            except Exception as e:
+                response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/" or path_only == "/dashboard":
         try:
             with open("dashboard.html", "r", encoding="utf-8") as f:
                 response_body = f.read()

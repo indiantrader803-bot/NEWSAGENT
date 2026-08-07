@@ -3,32 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiveForexSignals.AI — Live Dashboard</title>
+    <title>LiveForexSignals.AI — Professional Trader Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <meta name="color-scheme" content="dark light">
     <script>
-        // Inline script to avoid Flash of Unstyled Content (FOUC)
         const theme = localStorage.getItem("theme") || "dark";
         document.documentElement.setAttribute("data-theme", theme);
     </script>
     <style>
         :root {
             --font-family: 'Outfit', sans-serif;
-            --bg-color-dark: #07090e;
+            --bg-color-dark: #060813;
             --bg-color-light: #f4f6fc;
-            --card-bg-dark: rgba(15, 20, 35, 0.6);
-            --card-bg-light: rgba(255, 255, 255, 0.85);
+            --card-bg-dark: rgba(13, 17, 34, 0.7);
+            --card-bg-light: rgba(255, 255, 255, 0.9);
             --card-border-dark: rgba(255, 255, 255, 0.08);
-            --card-border-light: rgba(0, 0, 0, 0.06);
+            --card-border-light: rgba(0, 0, 0, 0.08);
             --text-color-dark: #eef2f7;
-            --text-color-light: #1c1f26;
-            --text-muted-dark: #8b9bb4;
+            --text-color-light: #1c2030;
+            --text-muted-dark: #8190ad;
             --text-muted-light: #64748b;
-            
-            /* Theme transitions */
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         [data-theme="dark"] {
@@ -37,11 +33,10 @@
             --card-border: var(--card-border-dark);
             --text-color: var(--text-color-dark);
             --text-muted: var(--text-muted-dark);
-            --glow-color: rgba(99, 102, 241, 0.15);
             --neon-accent: #6366f1;
             --secondary-accent: #10b981;
-            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-            --glass-blur: blur(12px);
+            --shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
+            --glass-blur: blur(16px);
         }
 
         [data-theme="light"] {
@@ -50,11 +45,10 @@
             --card-border: var(--card-border-light);
             --text-color: var(--text-color-light);
             --text-muted: var(--text-muted-light);
-            --glow-color: rgba(99, 102, 241, 0.05);
             --neon-accent: #4f46e5;
             --secondary-accent: #059669;
-            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
-            --glass-blur: blur(8px);
+            --shadow: 0 10px 30px 0 rgba(49, 54, 99, 0.08);
+            --glass-blur: blur(12px);
         }
 
         * {
@@ -69,67 +63,87 @@
             color: var(--text-color);
             min-height: 100vh;
             display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
+            overflow: hidden;
             background-image: 
-                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
         }
 
-        /* Custom Scrollbars */
-        scrollbar-color: var(--neon-accent) var(--card-bg);
-        scrollbar-width: thin;
-
-        @supports not (scrollbar-color: auto) {
-            ::-webkit-scrollbar {
-                width: 8px;
-            }
-            ::-webkit-scrollbar-track {
-                background: var(--card-bg);
-            }
-            ::-webkit-scrollbar-thumb {
-                background: var(--neon-accent);
-                border-radius: 4px;
-            }
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 5%;
+        /* Sidebar Navigation Layout */
+        .sidebar {
+            width: 260px;
+            background: rgba(10, 12, 25, 0.2);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
-            border-bottom: 1px solid var(--card-border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: rgba(15, 20, 35, 0.05);
+            border-right: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1.5rem;
+            z-index: 10;
         }
 
-        .brand {
+        .brand-logo {
             display: flex;
             align-items: center;
             gap: 0.75rem;
             font-weight: 700;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             letter-spacing: -0.05em;
             background: linear-gradient(135deg, var(--neon-accent) 0%, #a855f7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            margin-bottom: 3rem;
         }
 
-        .header-actions {
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            list-style: none;
+        }
+
+        .nav-item {
             display: flex;
             align-items: center;
             gap: 1rem;
+            padding: 0.8rem 1.2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--text-color);
+            border-left: 3px solid var(--neon-accent);
+        }
+
+        /* Main Workspace Content */
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 1.2rem 3rem;
+            border-bottom: 1px solid var(--card-border);
+            background: rgba(15, 20, 35, 0.05);
+            gap: 1.5rem;
         }
 
         .theme-toggle {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             color: var(--text-color);
-            padding: 0.5rem 1rem;
+            padding: 0.45rem 1rem;
             border-radius: 20px;
             cursor: pointer;
             font-weight: 600;
@@ -138,117 +152,70 @@
             align-items: center;
             gap: 0.5rem;
             box-shadow: var(--shadow);
-            transition: transform 0.2s ease, background-color 0.2s ease;
+            transition: transform 0.2s ease;
         }
 
         .theme-toggle:hover {
             transform: scale(1.05);
-            background: rgba(99, 102, 241, 0.1);
         }
 
-        .status-badge {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--secondary-accent);
-            padding: 0.4rem 0.8rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--secondary-accent);
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 8px var(--secondary-accent);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-        }
-
-        main {
+        .main-content {
             flex: 1;
-            padding: 2.5rem 5%;
-            max-width: 1400px;
-            width: 100%;
-            margin: 0 auto;
+            overflow-y: auto;
+            padding: 2.5rem 3rem;
             display: flex;
             flex-direction: column;
-            gap: 2.5rem;
+            gap: 2rem;
         }
 
-        /* Hero / Stats section */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1.5rem;
+        .page-panel {
+            display: none;
+            flex-direction: column;
+            gap: 2rem;
         }
 
-        .stat-card {
-            background: var(--card-bg);
+        .page-panel.active {
+            display: flex;
+        }
+
+        /* Section Category tabs (Signals) */
+        .category-tabs {
+            display: flex;
+            gap: 0.75rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.75rem;
+        }
+
+        .cat-tab {
+            padding: 0.5rem 1.2rem;
+            border-radius: 20px;
             border: 1px solid var(--card-border);
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.2s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--neon-accent);
-        }
-
-        .stat-label {
+            background: var(--card-bg);
+            cursor: pointer;
             font-size: 0.85rem;
             font-weight: 600;
             color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            transition: all 0.2s ease;
         }
 
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-color);
+        .cat-tab:hover, .cat-tab.active {
+            background: var(--neon-accent);
+            color: white;
+            border-color: var(--neon-accent);
         }
 
-        /* Signals section */
-        .signals-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Custom Scrollbars */
+        .main-content {
+            scrollbar-color: var(--neon-accent) var(--card-bg);
+            scrollbar-width: thin;
+        }
+        @supports not (scrollbar-color: auto) {
+            .main-content::-webkit-scrollbar { width: 6px; }
+            .main-content::-webkit-scrollbar-track { background: var(--card-bg); }
+            .main-content::-webkit-scrollbar-thumb { background: var(--neon-accent); border-radius: 3px; }
         }
 
-        .signals-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            letter-spacing: -0.03em;
-        }
-
+        /* Signals display */
         .signals-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -267,19 +234,16 @@
             flex-direction: column;
             gap: 1.25rem;
             position: relative;
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
-            animation: slideIn 0.5s ease backwards;
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
 
         .signal-card:hover {
-            transform: translateY(-8px) scale(1.01);
-            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px 0 rgba(99, 102, 241, 0.12);
         }
 
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .signal-card.buy { border-top: 4px solid #10b981; }
+        .signal-card.sell { border-top: 4px solid #ef4444; }
 
         .signal-badge {
             align-self: flex-start;
@@ -287,25 +251,10 @@
             border-radius: 8px;
             font-size: 0.8rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
             text-transform: uppercase;
         }
-
-        .signal-card.buy {
-            border-top: 4px solid #10b981;
-        }
-        .signal-card.buy .signal-badge {
-            background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
-        }
-
-        .signal-card.sell {
-            border-top: 4px solid #ef4444;
-        }
-        .signal-card.sell .signal-badge {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-        }
+        .buy .signal-badge { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .sell .signal-badge { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
 
         .signal-top {
             display: flex;
@@ -313,86 +262,183 @@
             align-items: center;
         }
 
-        .asset-name {
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .signal-timestamp {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
+        .asset-name { font-size: 1.3rem; font-weight: 700; }
+        .signal-timestamp { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; }
 
         .signal-parameters {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
-            background: rgba(0, 0, 0, 0.03);
+            gap: 0.75rem;
+            background: rgba(0, 0, 0, 0.02);
             padding: 1rem;
             border-radius: 12px;
             border: 1px solid var(--card-border);
         }
 
-        .param-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
+        .param-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .param-label { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .param-value { font-size: 1.05rem; font-weight: 700; }
 
-        .param-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .param-value {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
-        .confidence-bar {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .confidence-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--neon-accent), #a855f7);
-            border-radius: 3px;
-            width: 0%;
-            transition: width 1s ease-in-out;
-        }
-
-        /* Pricing Section */
-        .pricing-section {
+        /* Custom Analyzer Section */
+        .analyzer-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2.5rem;
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            margin-top: 2rem;
+            box-shadow: var(--shadow);
+            max-width: 700px;
+            margin: 0 auto;
+            width: 100%;
         }
 
-        .pricing-title {
-            font-size: 1.5rem;
+        .input-group {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .txt-symbol {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .txt-symbol:focus {
+            border-color: var(--neon-accent);
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, var(--neon-accent) 0%, #a855f7 100%);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
             font-weight: 700;
-            text-align: center;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
         }
 
+        .btn-analyze:hover { opacity: 0.95; }
+
+        .analysis-output {
+            margin-top: 1.5rem;
+            display: none;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            display: none;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--neon-accent);
+            animation: spin 1s ease-in-out infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Calendar events layout */
+        .table-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        th {
+            background: rgba(15, 20, 35, 0.1);
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tr:last-child td { border-bottom: none; }
+
+        .impact-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        .impact-med { background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+
+        /* News sentiments layout */
+        .news-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .news-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .news-top {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .news-title { font-weight: 700; font-size: 1.1rem; }
+        .news-desc { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+
+        .sentiment-badge {
+            align-self: flex-start;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .sentiment-Bullish { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .sentiment-Bearish { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .sentiment-Neutral { background: rgba(15, 23, 42, 0.15); color: var(--text-muted); }
+
+        /* Pricing Section */
         .pricing-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
         }
 
         .pricing-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 20px;
-            padding: 2rem;
+            padding: 2.5rem;
             box-shadow: var(--shadow);
             backdrop-filter: var(--glass-blur);
             -webkit-backdrop-filter: var(--glass-blur);
@@ -401,177 +447,175 @@
             gap: 1.5rem;
             text-align: center;
             position: relative;
-            transition: transform 0.2s ease;
         }
 
-        .pricing-card.premium {
+        .pricing-card.popular {
             border: 2px solid var(--neon-accent);
         }
 
-        .pricing-card:hover {
-            transform: translateY(-5px);
-        }
+        .price-title { font-size: 1.3rem; font-weight: 700; }
+        .price-val { font-size: 2.5rem; font-weight: 700; }
+        .features-list { list-style: none; text-align: left; display: flex; flex-direction: column; gap: 0.75rem; color: var(--text-muted); font-size: 0.95rem; margin: 1rem 0; }
+        .features-list li::before { content: '✓'; color: var(--secondary-accent); font-weight: 700; margin-right: 0.5rem; }
 
-        .price-name {
-            font-size: 1.25rem;
-            font-weight: 700;
-        }
-
-        .price-tag {
-            font-size: 2.25rem;
-            font-weight: 700;
-        }
-
-        .price-features {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-            list-style: none;
-            font-size: 0.9rem;
-            text-align: left;
-            margin: 1rem 0;
-            color: var(--text-muted);
-        }
-
-        .price-features li {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .price-features li::before {
-            content: '✓';
-            color: var(--secondary-accent);
-            font-weight: 700;
-        }
-
-        .btn-buy {
+        .btn-subscribe {
             background: linear-gradient(135deg, var(--neon-accent) 0%, #a855f7 100%);
             border: none;
             color: white;
-            padding: 0.8rem 1.5rem;
+            padding: 0.9rem 1.5rem;
             border-radius: 12px;
             font-weight: 700;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
-            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.25);
+            transition: all 0.2s ease;
         }
-
-        .btn-buy:hover {
-            opacity: 0.95;
-            transform: scale(1.02);
-        }
-
-        footer {
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            border-top: 1px solid var(--card-border);
-            padding: 1.5rem 5%;
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: auto;
-        }
+        .btn-subscribe:hover { transform: scale(1.02); opacity: 0.95; }
     </style>
 </head>
 <body>
-    <header>
-        <div class="brand">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="brand-logo">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: var(--neon-accent);">
                 <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
                 <polyline points="16 7 22 7 22 13"></polyline>
             </svg>
-            LiveForexSignals.AI
+            ForexSignals AI
         </div>
-        <div class="header-actions">
-            <button class="theme-toggle" id="theme-btn">
-                🌙 Dark Mode
-            </button>
+        <ul class="nav-links">
+            <li class="nav-item active" onclick="switchPage('page-signals', this)">
+                ⚡ Live Signals
+            </li>
+            <li class="nav-item" onclick="switchPage('page-analyzer', this)">
+                🤖 AI Custom Analyzer
+            </li>
+            <li class="nav-item" onclick="switchPage('page-calendar', this)">
+                📅 Economic Calendar
+            </li>
+            <li class="nav-item" onclick="switchPage('page-news', this)">
+                📰 Sentiment News
+            </li>
+            <li class="nav-item" onclick="switchPage('page-subscribe', this)">
+                💳 Subscribe Tier
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Workspace -->
+    <div class="workspace">
+        <header>
+            <button class="theme-toggle" id="theme-btn">🌙 Dark Mode</button>
             <div class="status-badge">
-                <span class="status-dot"></span> Active
+                <span class="status-dot"></span> Active Engine
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- PAGE 1: Signals Board -->
+            <div class="page-panel active" id="page-signals">
+                <div class="category-tabs">
+                    <button class="cat-tab active" onclick="filterCategory('ALL', this)">All</button>
+                    <button class="cat-tab" onclick="filterCategory('FOREX', this)">Forex</button>
+                    <button class="cat-tab" onclick="filterCategory('COMMODITIES', this)">Commodities</button>
+                    <button class="cat-tab" onclick="filterCategory('INDIAN', this)">Indian Market</button>
+                    <button class="cat-tab" onclick="filterCategory('US', this)">US Market</button>
+                </div>
+                <div class="signals-grid" id="signals-container">
+                    <!-- Dynamic Signals will load here -->
+                </div>
+            </div>
+
+            <!-- PAGE 2: AI Custom Analyzer -->
+            <div class="page-panel" id="page-analyzer">
+                <div class="analyzer-box">
+                    <h2 style="font-size: 1.5rem; font-weight: 700; text-align: center;">AI Real-Time Technical Analyzer</h2>
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">
+                        Analyze any asset instantly. Enter a ticker symbol (e.g. <code>EURUSD=X</code>, <code>GC=F</code>, <code>RELIANCE.NS</code>, <code>AAPL</code>)
+                    </p>
+                    <div class="input-group">
+                        <input type="text" class="txt-symbol" id="symbol-input" placeholder="Enter Symbol (e.g. XAU/USD or AAPL)..." />
+                        <button class="btn-analyze" onclick="runAnalysis()">Analyze</button>
+                    </div>
+                    <div class="spinner" id="analyzer-spinner"></div>
+                    <div class="analysis-output" id="analyzer-result">
+                        <!-- Dynamic analysis card output -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 3: Economic Calendar -->
+            <div class="page-panel" id="page-calendar">
+                <h2 style="font-size: 1.5rem; font-weight: 700;">Upcoming High-Impact Economic Events</h2>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date/Time</th>
+                                <th>Currency</th>
+                                <th>Economic Indicator</th>
+                                <th>Impact</th>
+                                <th>Forecast</th>
+                                <th>Previous</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendar-container">
+                            <!-- Dynamic events load here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PAGE 4: Sentiment News -->
+            <div class="page-panel" id="page-news">
+                <h2 style="font-size: 1.5rem; font-weight: 700;">Live Sentiment News & Asset Impact</h2>
+                <div class="news-grid" id="news-container">
+                    <!-- Dynamic news load here -->
+                </div>
+            </div>
+
+            <!-- PAGE 5: Subscribe & Monetization -->
+            <div class="page-panel" id="page-subscribe">
+                <h2 style="font-size: 1.6rem; font-weight: 700; text-align: center; margin-bottom: 1rem;">Unlock Premium AI Trader Signals</h2>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <div class="price-title">Starter Plan</div>
+                        <div class="price-val">$29/mo</div>
+                        <ul class="features-list">
+                            <li>Access to Standard Forex Signals</li>
+                            <li>Real-Time web dashboard updates</li>
+                            <li>Private Telegram Channel Access</li>
+                        </ul>
+                        <button class="btn-subscribe" onclick="alert('Redirecting to payment processor...')">Upgrade Now</button>
+                    </div>
+                    <div class="pricing-card popular">
+                        <div class="price-title">Elite AI Plan</div>
+                        <div class="price-val">$59/mo</div>
+                        <ul class="features-list">
+                            <li>All Forex, Commodities & Stock signals</li>
+                            <li>AI Custom Technical Analyzer access</li>
+                            <li>Instant High-Impact breaking alerts</li>
+                            <li>PNG Visual Signal Card Delivery</li>
+                        </ul>
+                        <button class="btn-subscribe" onclick="alert('Redirecting to payment processor...')">Upgrade Now</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </header>
-
-    <main>
-        <!-- Stats Panel -->
-        <section class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Signals</div>
-                <div class="stat-value" id="stat-total">--</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Win Rate / Accuracy</div>
-                <div class="stat-value" id="stat-accuracy">87.5%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Active Assets Monitored</div>
-                <div class="stat-value">25+</div>
-            </div>
-        </section>
-
-        <!-- Live Signals Grid -->
-        <section>
-            <div class="signals-header">
-                <h2 class="signals-title">Live Signals</h2>
-            </div>
-            <div class="signals-grid" id="signals-container">
-                <!-- Fallback Loading Card -->
-                <div class="signal-card buy" style="animation-delay: 0.1s;">
-                    <div class="signal-top">
-                        <div class="signal-badge">Loading</div>
-                        <div class="signal-timestamp">Active</div>
-                    </div>
-                    <div class="asset-name">Fetching signals...</div>
-                    <div class="signal-parameters">
-                        <div class="param-group">
-                            <span class="param-label">Entry</span>
-                            <span class="param-value">--</span>
-                        </div>
-                        <div class="param-group">
-                            <span class="param-label">Stop Loss</span>
-                            <span class="param-value">--</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Pricing Portal -->
-        <section class="pricing-section">
-            <h2 class="pricing-title">Monetize & Upgrade Subscriptions</h2>
-            <div class="pricing-grid">
-                <div class="pricing-card">
-                    <div class="price-name">Basic Plan</div>
-                    <div class="price-tag">$29/mo</div>
-                    <ul class="price-features">
-                        <li>Standard Forex Signals</li>
-                        <li>Telegram Channel Access</li>
-                        <li>Email Alerts</li>
-                    </ul>
-                    <button class="btn-buy">Subscribe Now</button>
-                </div>
-                <div class="pricing-card premium">
-                    <div class="price-name">Pro AI Trader</div>
-                    <div class="price-tag">$59/mo</div>
-                    <ul class="price-features">
-                        <li>Instant High-Impact alerts</li>
-                        <li>Visual PNG signals & cards</li>
-                        <li>Crypto & NSE/BSE stock indicators</li>
-                        <li>24/7 dedicated support</li>
-                    </ul>
-                    <button class="btn-buy">Subscribe Now</button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        &copy; 2026 LiveForexSignals.AI. All rights reserved. Powered by ForexSignalAI Engine.
-    </footer>
+    </div>
 
     <script>
-        // Real-time theme pinning
+        let currentTab = 'ALL';
+        let allSignals = [];
+
+        // Navigation
+        function switchPage(pageId, element) {
+            document.querySelectorAll(".page-panel").forEach(p => p.classList.remove("active"));
+            document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+            document.getElementById(pageId).classList.add("active");
+            element.classList.add("active");
+        }
+
+        // Theme Toggle
         const themeBtn = document.getElementById("theme-btn");
         themeBtn.addEventListener("click", () => {
             const currentTheme = document.documentElement.getAttribute("data-theme");
@@ -580,87 +624,266 @@
             localStorage.setItem("theme", newTheme);
             themeBtn.innerText = newTheme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode";
         });
-
-        // Initialize theme button text
         themeBtn.innerText = theme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode";
 
-        // Fetch Live Signals from API
-        async function fetchSignals() {
+        // Signal Classification Helper
+        function classifySignal(sig) {
+            const sym = (sig.pair || "").toUpperCase();
+            if (sym.includes(".NS") || sym.includes(".BO") || sym.includes("NIFTY") || sym.includes("SENSEX") || sym.includes("BSE") || sym.includes("NSE")) {
+                return 'INDIAN';
+            }
+            if (sym.includes("XAU") || sym.includes("GOLD") || sym.includes("XAG") || sym.includes("SILVER") || sym.includes("OIL") || sym.includes("WTI") || sym.includes("BRENT")) {
+                return 'COMMODITIES';
+            }
+            if (sym.includes("/") || sym.includes("USD") || sym.includes("EUR") || sym.includes("GBP") || sym.includes("JPY") || sym.includes("AUD") || sym.includes("CAD")) {
+                return 'FOREX';
+            }
+            // Defaults to US market for standard single symbol strings
+            return 'US';
+        }
+
+        // Load & Filter Signals
+        async function loadSignals() {
             try {
-                const response = await fetch("/api/signals");
-                if (!response.ok) throw new Error("API request failed");
+                const res = await fetch("/api/signals");
+                allSignals = await res.json();
+                renderSignals();
+            } catch (e) {
+                console.error("Failed to load signals:", e);
+            }
+        }
+
+        function filterCategory(cat, element) {
+            document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
+            element.classList.add("active");
+            currentTab = cat;
+            renderSignals();
+        }
+
+        function renderSignals() {
+            const container = document.getElementById("signals-container");
+            container.innerHTML = "";
+            
+            const filtered = allSignals.filter(s => {
+                if (currentTab === 'ALL') return true;
+                return classifySignal(s) === currentTab;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="signal-card buy" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                        <div class="asset-name">No active ${currentTab.toLowerCase()} signals currently available.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach((sig, idx) => {
+                const isBuy = sig.direction.toUpperCase().includes("BUY") || sig.direction.toUpperCase().includes("LONG") || sig.direction.toUpperCase().includes("BULLISH");
+                const cardClass = isBuy ? "buy" : "sell";
+                const badgeText = isBuy ? "BUY / LONG" : "SELL / SHORT";
+                
+                const card = document.createElement("div");
+                card.className = `signal-card ${cardClass}`;
+                card.innerHTML = `
+                    <div class="signal-top">
+                        <div class="signal-badge">${badgeText}</div>
+                        <div class="signal-timestamp">${sig.timestamp || 'Live'}</div>
+                    </div>
+                    <div class="asset-name">${sig.pair}</div>
+                    <div class="signal-parameters">
+                        <div class="param-group">
+                            <span class="param-label">Entry</span>
+                            <span class="param-value">${sig.entry}</span>
+                        </div>
+                        <div class="param-group">
+                            <span class="param-label">Stop Loss</span>
+                            <span class="param-value">${sig.sl}</span>
+                        </div>
+                        <div class="param-group" style="margin-top: 0.5rem;">
+                            <span class="param-label">TP 1</span>
+                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp1}</span>
+                        </div>
+                        <div class="param-group" style="margin-top: 0.5rem;">
+                            <span class="param-label">TP 2</span>
+                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp2}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">
+                            <span>CONFIDENCE LEVEL</span>
+                            <span>${sig.confidence || 80}%</span>
+                        </div>
+                        <div style="height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                            <div style="height: 100%; background: linear-gradient(90deg, var(--neon-accent), #a855f7); width: ${sig.confidence || 80}%;"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // AI Analyzer Action
+        async function runAnalysis() {
+            const symbol = document.getElementById("symbol-input").value.trim();
+            const spinner = document.getElementById("analyzer-spinner");
+            const resultBox = document.getElementById("analyzer-result");
+            
+            if (!symbol) {
+                alert("Please enter a ticker symbol!");
+                return;
+            }
+
+            spinner.style.display = "block";
+            resultBox.style.display = "none";
+            resultBox.innerHTML = "";
+
+            try {
+                // Map user symbols (e.g. XAU/USD -> GC=F, EUR/USD -> EURUSD=X)
+                let yfSymbol = symbol;
+                if (symbol.toUpperCase() === "XAU/USD" || symbol.toUpperCase() === "GOLD") yfSymbol = "GC=F";
+                else if (symbol.toUpperCase() === "XAG/USD" || symbol.toUpperCase() === "SILVER") yfSymbol = "SI=F";
+                else if (symbol.includes("/")) yfSymbol = symbol.replace("/", "") + "=X";
+
+                const response = await fetch(`/api/analyze?symbol=${encodeURIComponent(yfSymbol)}`);
                 const data = await response.json();
                 
-                const container = document.getElementById("signals-container");
-                container.innerHTML = "";
-                
-                // Update total count
-                document.getElementById("stat-total").innerText = data.length;
+                spinner.style.display = "none";
+                resultBox.style.display = "block";
 
-                if (data.length === 0) {
-                    container.innerHTML = `
-                        <div class="signal-card buy" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
-                            <div class="asset-name">No active signals yet. Check back soon!</div>
+                if (data.error) {
+                    resultBox.innerHTML = `
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 1.5rem; text-align: center; color: #ef4444; font-weight: 600;">
+                            ⚠️ Analysis Failed: ${data.error}
                         </div>
                     `;
                     return;
                 }
 
-                data.forEach((sig, index) => {
-                    const isBuy = sig.direction.toUpperCase() === "BUY" || sig.direction.toUpperCase() === "LONG" || sig.direction.toUpperCase().includes("BULLISH");
-                    const cardClass = isBuy ? "buy" : "sell";
-                    const badgeText = isBuy ? "BUY / LONG" : "SELL / SHORT";
-                    
-                    const card = document.createElement("div");
-                    card.className = `signal-card ${cardClass}`;
-                    card.style.animationDelay = `${index * 0.1}s`;
-                    
-                    card.innerHTML = `
+                const isBuy = data.direction.toUpperCase().includes("BUY") || data.direction.toUpperCase().includes("LONG") || data.direction.toUpperCase().includes("BULLISH");
+                const cardClass = isBuy ? "buy" : "sell";
+                const badgeText = isBuy ? "BUY / LONG" : "SELL / SHORT";
+
+                resultBox.innerHTML = `
+                    <div class="signal-card ${cardClass}" style="width: 100%;">
                         <div class="signal-top">
                             <div class="signal-badge">${badgeText}</div>
-                            <div class="signal-timestamp">${sig.timestamp || 'Live'}</div>
+                            <div style="font-weight: 700; color: var(--secondary-accent); font-size: 1.05rem;">
+                                ${data.current_price} <span style="font-size: 0.85rem; font-weight: 500;">(${data.change_pct})</span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="asset-name">${sig.pair}</div>
-                        </div>
+                        <div class="asset-name">AI Setup for ${data.symbol}</div>
                         <div class="signal-parameters">
                             <div class="param-group">
                                 <span class="param-label">Entry Price</span>
-                                <span class="param-value">${sig.entry || '--'}</span>
+                                <span class="param-value">${data.entry}</span>
                             </div>
                             <div class="param-group">
                                 <span class="param-label">Stop Loss</span>
-                                <span class="param-value">${sig.sl || '--'}</span>
+                                <span class="param-value">${data.sl}</span>
                             </div>
                             <div class="param-group" style="margin-top: 0.5rem;">
                                 <span class="param-label">Target 1</span>
-                                <span class="param-value" style="color: var(--secondary-accent);">${sig.tp1 || '--'}</span>
+                                <span class="param-value" style="color: var(--secondary-accent);">${data.tp1}</span>
                             </div>
                             <div class="param-group" style="margin-top: 0.5rem;">
                                 <span class="param-label">Target 2</span>
-                                <span class="param-value" style="color: var(--secondary-accent);">${sig.tp2 || '--'}</span>
+                                <span class="param-value" style="color: var(--secondary-accent);">${data.tp2}</span>
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">
-                                <span>CONFIDENCE</span>
-                                <span>${sig.confidence || 80}%</span>
-                            </div>
-                            <div class="confidence-bar">
-                                <div class="confidence-fill" style="width: ${sig.confidence || 80}%;"></div>
-                            </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.03); padding: 1rem; border-radius: 10px; border: 1px solid var(--card-border);">
+                            <span class="param-label">AI Analysis Logic</span>
+                            <p style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color); font-weight: 500;">${data.reason}</p>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                spinner.style.display = "none";
+                resultBox.style.display = "block";
+                resultBox.innerHTML = `
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; border-radius: 12px; padding: 1.5rem; text-align: center; color: #ef4444; font-weight: 600;">
+                        ⚠️ Network Error connecting to analyzer.
+                    </div>
+                `;
+            }
+        }
+
+        // Load Economic Calendar
+        async function loadCalendar() {
+            try {
+                const res = await fetch("/api/calendar");
+                const data = await res.json();
+                
+                const container = document.getElementById("calendar-container");
+                container.innerHTML = "";
+                
+                if (data.length === 0) {
+                    container.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No upcoming calendar events.</td></tr>`;
+                    return;
+                }
+
+                data.forEach(ev => {
+                    const impactClass = ev.impact.toUpperCase() === "HIGH" ? "impact-high" : "impact-med";
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td style="font-weight: 600;">${ev.date} ${ev.time}</td>
+                        <td style="font-weight: 700; color: var(--neon-accent);">${ev.country}</td>
+                        <td style="font-weight: 600;">${ev.title}</td>
+                        <td><span class="${impactClass}">${ev.impact}</span></td>
+                        <td style="font-weight: 600;">${ev.forecast}</td>
+                        <td style="font-weight: 600; color: var(--text-muted);">${ev.previous}</td>
+                    `;
+                    container.appendChild(row);
+                });
+            } catch (e) {
+                console.error("Failed to load calendar:", e);
+            }
+        }
+
+        // Load Sentiment News
+        async function loadNews() {
+            try {
+                const res = await fetch("/api/news");
+                const data = await res.json();
+                
+                const container = document.getElementById("news-container");
+                container.innerHTML = "";
+                
+                if (data.length === 0) {
+                    container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No recent news articles found.</div>`;
+                    return;
+                }
+
+                data.forEach(a => {
+                    const card = document.createElement("div");
+                    card.className = "news-card";
+                    card.innerHTML = `
+                        <div class="news-top">
+                            <span>📰 ${a.source}</span>
+                            <span>${a.publishedAt}</span>
+                        </div>
+                        <div class="news-title">${a.title}</div>
+                        <div class="news-desc">${a.description || ''}</div>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                            <span class="sentiment-badge sentiment-${a.direction}">${a.direction}</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Confidence: ${a.confidence}</span>
                         </div>
                     `;
                     container.appendChild(card);
                 });
-            } catch (err) {
-                console.error("Error loading signals:", err);
+            } catch (e) {
+                console.error("Failed to load news:", e);
             }
         }
 
-        // Load initially and poll every 10 seconds
-        fetchSignals();
-        setInterval(fetchSignals, 10000);
+        // Initial Data Fetch & Page Polls
+        loadSignals();
+        loadCalendar();
+        loadNews();
+
+        setInterval(loadSignals, 10000);
+        setInterval(loadCalendar, 60000);
+        setInterval(loadNews, 30000);
     </script>
 </body>
 </html>
