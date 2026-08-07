@@ -4260,13 +4260,18 @@ async def worker_loop() -> None:
 
     print("All jobs scheduled. Listening for user questions...")
 
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+
     if app3:
-        await asyncio.gather(
-            app.run_polling(allowed_updates=Update.ALL_TYPES),
-            app3.run_polling(allowed_updates=Update.ALL_TYPES),
-        )
-    else:
-        await app.run_polling(allowed_updates=Update.ALL_TYPES)
+        await app3.initialize()
+        await app3.start()
+        await app3.updater.start_polling(allowed_updates=Update.ALL_TYPES)
+
+    # Keep loop running indefinitely to handle health check server, job queue, and bot polling
+    while True:
+        await asyncio.sleep(3600)
 
 
 def main() -> int:
