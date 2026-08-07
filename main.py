@@ -4154,13 +4154,40 @@ async def ai_agent_improvement_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 async def handle_health_check(reader, writer):
     try:
         request = await reader.read(1024)
+        req_text = request.decode("utf-8", errors="ignore")
+        first_line = req_text.split("\r\n")[0] if req_text else ""
+        parts = first_line.split()
+        path = parts[1] if len(parts) > 1 else "/"
     except Exception:
-        pass
-    response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
-    writer.write(response.encode("utf-8"))
-    await writer.drain()
-    writer.close()
+        path = "/"
+
+    if path == "/api/signals":
+        signals = load_signal_log()
+        signals_subset = list(reversed(signals))[:30]
+        response_body = json.dumps(signals_subset)
+        content_type = "application/json"
+    elif path == "/" or path == "/dashboard":
+        try:
+            with open("dashboard.html", "r", encoding="utf-8") as f:
+                response_body = f.read()
+        except Exception:
+            response_body = "<h1>LiveForexSignals.AI Dashboard</h1><p>Dashboard file missing.</p>"
+        content_type = "text/html"
+    else:
+        response_body = "OK"
+        content_type = "text/plain"
+
+    response_bytes = response_body.encode("utf-8")
+    response_header = (
+        f"HTTP/1.1 200 OK\r\n"
+        f"Content-Type: {content_type}; charset=utf-8\r\n"
+        f"Content-Length: {len(response_bytes)}\r\n"
+        f"Connection: close\r\n\r\n"
+    )
     try:
+        writer.write(response_header.encode("utf-8") + response_bytes)
+        await writer.drain()
+        writer.close()
         await writer.wait_closed()
     except Exception:
         pass

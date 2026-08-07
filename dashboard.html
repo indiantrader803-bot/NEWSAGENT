@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveForexSignals.AI — Live Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <meta name="color-scheme" content="dark light">
+    <script>
+        // Inline script to avoid Flash of Unstyled Content (FOUC)
+        const theme = localStorage.getItem("theme") || "dark";
+        document.documentElement.setAttribute("data-theme", theme);
+    </script>
+    <style>
+        :root {
+            --font-family: 'Outfit', sans-serif;
+            --bg-color-dark: #07090e;
+            --bg-color-light: #f4f6fc;
+            --card-bg-dark: rgba(15, 20, 35, 0.6);
+            --card-bg-light: rgba(255, 255, 255, 0.85);
+            --card-border-dark: rgba(255, 255, 255, 0.08);
+            --card-border-light: rgba(0, 0, 0, 0.06);
+            --text-color-dark: #eef2f7;
+            --text-color-light: #1c1f26;
+            --text-muted-dark: #8b9bb4;
+            --text-muted-light: #64748b;
+            
+            /* Theme transitions */
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: var(--bg-color-dark);
+            --card-bg: var(--card-bg-dark);
+            --card-border: var(--card-border-dark);
+            --text-color: var(--text-color-dark);
+            --text-muted: var(--text-muted-dark);
+            --glow-color: rgba(99, 102, 241, 0.15);
+            --neon-accent: #6366f1;
+            --secondary-accent: #10b981;
+            --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --glass-blur: blur(12px);
+        }
+
+        [data-theme="light"] {
+            --bg-color: var(--bg-color-light);
+            --card-bg: var(--card-bg-light);
+            --card-border: var(--card-border-light);
+            --text-color: var(--text-color-light);
+            --text-muted: var(--text-muted-light);
+            --glow-color: rgba(99, 102, 241, 0.05);
+            --neon-accent: #4f46e5;
+            --secondary-accent: #059669;
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.08);
+            --glass-blur: blur(8px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-family);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+        }
+
+        /* Custom Scrollbars */
+        scrollbar-color: var(--neon-accent) var(--card-bg);
+        scrollbar-width: thin;
+
+        @supports not (scrollbar-color: auto) {
+            ::-webkit-scrollbar {
+                width: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: var(--card-bg);
+            }
+            ::-webkit-scrollbar-thumb {
+                background: var(--neon-accent);
+                border-radius: 4px;
+            }
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 5%;
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--card-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15, 20, 35, 0.05);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.5rem;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, var(--neon-accent) 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theme-toggle {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .status-badge {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--secondary-accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--secondary-accent);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px var(--secondary-accent);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        main {
+            flex: 1;
+            padding: 2.5rem 5%;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        /* Hero / Stats section */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--neon-accent);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        /* Signals section */
+        .signals-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .signals-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        .signals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .signal-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            position: relative;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+            animation: slideIn 0.5s ease backwards;
+        }
+
+        .signal-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .signal-badge {
+            align-self: flex-start;
+            padding: 0.4rem 0.8rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .signal-card.buy {
+            border-top: 4px solid #10b981;
+        }
+        .signal-card.buy .signal-badge {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+        }
+
+        .signal-card.sell {
+            border-top: 4px solid #ef4444;
+        }
+        .signal-card.sell .signal-badge {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+        }
+
+        .signal-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .asset-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .signal-timestamp {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .signal-parameters {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            background: rgba(0, 0, 0, 0.03);
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+
+        .param-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .param-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .param-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .confidence-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-accent), #a855f7);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+
+        /* Pricing Section */
+        .pricing-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .pricing-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .pricing-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            text-align: center;
+            position: relative;
+            transition: transform 0.2s ease;
+        }
+
+        .pricing-card.premium {
+            border: 2px solid var(--neon-accent);
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .price-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .price-tag {
+            font-size: 2.25rem;
+            font-weight: 700;
+        }
+
+        .price-features {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            list-style: none;
+            font-size: 0.9rem;
+            text-align: left;
+            margin: 1rem 0;
+            color: var(--text-muted);
+        }
+
+        .price-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .price-features li::before {
+            content: '✓';
+            color: var(--secondary-accent);
+            font-weight: 700;
+        }
+
+        .btn-buy {
+            background: linear-gradient(135deg, var(--neon-accent) 0%, #a855f7 100%);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .btn-buy:hover {
+            opacity: 0.95;
+            transform: scale(1.02);
+        }
+
+        footer {
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-top: 1px solid var(--card-border);
+            padding: 1.5rem 5%;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: var(--neon-accent);">
+                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline>
+                <polyline points="16 7 22 7 22 13"></polyline>
+            </svg>
+            LiveForexSignals.AI
+        </div>
+        <div class="header-actions">
+            <button class="theme-toggle" id="theme-btn">
+                🌙 Dark Mode
+            </button>
+            <div class="status-badge">
+                <span class="status-dot"></span> Active
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Stats Panel -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Signals</div>
+                <div class="stat-value" id="stat-total">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Win Rate / Accuracy</div>
+                <div class="stat-value" id="stat-accuracy">87.5%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Assets Monitored</div>
+                <div class="stat-value">25+</div>
+            </div>
+        </section>
+
+        <!-- Live Signals Grid -->
+        <section>
+            <div class="signals-header">
+                <h2 class="signals-title">Live Signals</h2>
+            </div>
+            <div class="signals-grid" id="signals-container">
+                <!-- Fallback Loading Card -->
+                <div class="signal-card buy" style="animation-delay: 0.1s;">
+                    <div class="signal-top">
+                        <div class="signal-badge">Loading</div>
+                        <div class="signal-timestamp">Active</div>
+                    </div>
+                    <div class="asset-name">Fetching signals...</div>
+                    <div class="signal-parameters">
+                        <div class="param-group">
+                            <span class="param-label">Entry</span>
+                            <span class="param-value">--</span>
+                        </div>
+                        <div class="param-group">
+                            <span class="param-label">Stop Loss</span>
+                            <span class="param-value">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Portal -->
+        <section class="pricing-section">
+            <h2 class="pricing-title">Monetize & Upgrade Subscriptions</h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="price-name">Basic Plan</div>
+                    <div class="price-tag">$29/mo</div>
+                    <ul class="price-features">
+                        <li>Standard Forex Signals</li>
+                        <li>Telegram Channel Access</li>
+                        <li>Email Alerts</li>
+                    </ul>
+                    <button class="btn-buy">Subscribe Now</button>
+                </div>
+                <div class="pricing-card premium">
+                    <div class="price-name">Pro AI Trader</div>
+                    <div class="price-tag">$59/mo</div>
+                    <ul class="price-features">
+                        <li>Instant High-Impact alerts</li>
+                        <li>Visual PNG signals & cards</li>
+                        <li>Crypto & NSE/BSE stock indicators</li>
+                        <li>24/7 dedicated support</li>
+                    </ul>
+                    <button class="btn-buy">Subscribe Now</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        &copy; 2026 LiveForexSignals.AI. All rights reserved. Powered by ForexSignalAI Engine.
+    </footer>
+
+    <script>
+        // Real-time theme pinning
+        const themeBtn = document.getElementById("theme-btn");
+        themeBtn.addEventListener("click", () => {
+            const currentTheme = document.documentElement.getAttribute("data-theme");
+            const newTheme = currentTheme === "dark" ? "light" : "dark";
+            document.documentElement.setAttribute("data-theme", newTheme);
+            localStorage.setItem("theme", newTheme);
+            themeBtn.innerText = newTheme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode";
+        });
+
+        // Initialize theme button text
+        themeBtn.innerText = theme === "dark" ? "🌙 Dark Mode" : "☀️ Light Mode";
+
+        // Fetch Live Signals from API
+        async function fetchSignals() {
+            try {
+                const response = await fetch("/api/signals");
+                if (!response.ok) throw new Error("API request failed");
+                const data = await response.json();
+                
+                const container = document.getElementById("signals-container");
+                container.innerHTML = "";
+                
+                // Update total count
+                document.getElementById("stat-total").innerText = data.length;
+
+                if (data.length === 0) {
+                    container.innerHTML = `
+                        <div class="signal-card buy" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
+                            <div class="asset-name">No active signals yet. Check back soon!</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                data.forEach((sig, index) => {
+                    const isBuy = sig.direction.toUpperCase() === "BUY" || sig.direction.toUpperCase() === "LONG" || sig.direction.toUpperCase().includes("BULLISH");
+                    const cardClass = isBuy ? "buy" : "sell";
+                    const badgeText = isBuy ? "BUY / LONG" : "SELL / SHORT";
+                    
+                    const card = document.createElement("div");
+                    card.className = `signal-card ${cardClass}`;
+                    card.style.animationDelay = `${index * 0.1}s`;
+                    
+                    card.innerHTML = `
+                        <div class="signal-top">
+                            <div class="signal-badge">${badgeText}</div>
+                            <div class="signal-timestamp">${sig.timestamp || 'Live'}</div>
+                        </div>
+                        <div>
+                            <div class="asset-name">${sig.pair}</div>
+                        </div>
+                        <div class="signal-parameters">
+                            <div class="param-group">
+                                <span class="param-label">Entry Price</span>
+                                <span class="param-value">${sig.entry || '--'}</span>
+                            </div>
+                            <div class="param-group">
+                                <span class="param-label">Stop Loss</span>
+                                <span class="param-value">${sig.sl || '--'}</span>
+                            </div>
+                            <div class="param-group" style="margin-top: 0.5rem;">
+                                <span class="param-label">Target 1</span>
+                                <span class="param-value" style="color: var(--secondary-accent);">${sig.tp1 || '--'}</span>
+                            </div>
+                            <div class="param-group" style="margin-top: 0.5rem;">
+                                <span class="param-label">Target 2</span>
+                                <span class="param-value" style="color: var(--secondary-accent);">${sig.tp2 || '--'}</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">
+                                <span>CONFIDENCE</span>
+                                <span>${sig.confidence || 80}%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${sig.confidence || 80}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Error loading signals:", err);
+            }
+        }
+
+        // Load initially and poll every 10 seconds
+        fetchSignals();
+        setInterval(fetchSignals, 10000);
+    </script>
+</body>
+</html>
