@@ -4151,6 +4151,32 @@ async def ai_agent_improvement_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         print(f"[AI AGENT] Job failed: {exc}")
 
 
+async def handle_health_check(reader, writer):
+    try:
+        request = await reader.read(1024)
+    except Exception:
+        pass
+    response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK"
+    writer.write(response.encode("utf-8"))
+    await writer.drain()
+    writer.close()
+    try:
+        await writer.wait_closed()
+    except Exception:
+        pass
+
+
+async def start_health_check_server():
+    port = int(os.getenv("PORT", "8080"))
+    try:
+        server = await asyncio.start_server(handle_health_check, "0.0.0.0", port)
+        print(f"[HEALTH] Serving health checks on port {port}")
+        async with server:
+            await server.serve_forever()
+    except Exception as e:
+        print(f"[HEALTH] Server failed to start: {e}")
+
+
 async def worker_loop() -> None:
     global _seen_keys, _signal_log, _subscribers
     _seen_keys  = load_seen_keys()
@@ -4163,6 +4189,8 @@ async def worker_loop() -> None:
     print(f"Loaded {len(_seen_keys)} previously sent article keys.")
     print(f"Loaded {len(_subscribers)} subscriber(s).")
     _backfill_subscribers_from_updates()
+    # Start internal web server for health checks on Render's Free Web Service plan
+    asyncio.create_task(start_health_check_server())
 
     app = Application.builder().token(BOT_TOKEN).build()
 
