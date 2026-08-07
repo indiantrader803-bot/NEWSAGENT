@@ -16,6 +16,17 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
 
+      - name: Restore state cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            sent_articles.json
+            signal_log.json
+            .ai_cycle_counter
+          key: state-${{ github.run_id }}
+          restore-keys: |
+            state-
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
