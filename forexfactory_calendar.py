@@ -40,7 +40,6 @@ def fetch_calendar_events() -> list[dict[str, Any]]:
         root = ET.fromstring(r.read())
     events: list[dict[str, Any]] = []
     for el in root.findall("event"):
-    for el in root.findall("event"):
         title = (el.findtext("title") or "").strip()
         if not title:
             continue
