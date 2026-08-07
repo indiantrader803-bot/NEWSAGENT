@@ -4175,7 +4175,7 @@ async def handle_health_check(reader, writer):
     elif path_only == "/api/calendar":
         try:
             import forexfactory_calendar as ffcal
-            events = ffcal.get_upcoming_high_impact(hours_ahead=48)
+            events = ffcal.fetch_calendar_events()
             serializable_events = []
             for ev in events:
                 serializable_events.append({

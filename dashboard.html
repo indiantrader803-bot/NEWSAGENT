@@ -15,15 +15,15 @@
     <style>
         :root {
             --font-family: 'Outfit', sans-serif;
-            --bg-color-dark: #060813;
-            --bg-color-light: #f4f6fc;
-            --card-bg-dark: rgba(13, 17, 34, 0.7);
+            --bg-color-dark: #05070f;
+            --bg-color-light: #f3f5fa;
+            --card-bg-dark: rgba(11, 15, 30, 0.75);
             --card-bg-light: rgba(255, 255, 255, 0.9);
             --card-border-dark: rgba(255, 255, 255, 0.08);
             --card-border-light: rgba(0, 0, 0, 0.08);
             --text-color-dark: #eef2f7;
-            --text-color-light: #1c2030;
-            --text-muted-dark: #8190ad;
+            --text-color-light: #1b1e2b;
+            --text-muted-dark: #7e8da9;
             --text-muted-light: #64748b;
         }
 
@@ -36,7 +36,7 @@
             --neon-accent: #6366f1;
             --secondary-accent: #10b981;
             --shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.5);
-            --glass-blur: blur(16px);
+            --glass-blur: blur(18px);
         }
 
         [data-theme="light"] {
@@ -65,8 +65,8 @@
             display: flex;
             overflow: hidden;
             background-image: 
-                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 45%),
+                radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 45%);
         }
 
         /* Sidebar Navigation Layout */
@@ -166,6 +166,7 @@
             display: flex;
             flex-direction: column;
             gap: 2rem;
+            scroll-behavior: smooth;
         }
 
         .page-panel {
@@ -178,12 +179,13 @@
             display: flex;
         }
 
-        /* Section Category tabs (Signals) */
+        /* Section Category tabs */
         .category-tabs {
             display: flex;
             gap: 0.75rem;
             border-bottom: 1px solid var(--card-border);
             padding-bottom: 0.75rem;
+            flex-wrap: wrap;
         }
 
         .cat-tab {
@@ -210,9 +212,9 @@
             scrollbar-width: thin;
         }
         @supports not (scrollbar-color: auto) {
-            .main-content::-webkit-scrollbar { width: 6px; }
+            .main-content::-webkit-scrollbar { width: 8px; }
             .main-content::-webkit-scrollbar-track { background: var(--card-bg); }
-            .main-content::-webkit-scrollbar-thumb { background: var(--neon-accent); border-radius: 3px; }
+            .main-content::-webkit-scrollbar-thumb { background: var(--neon-accent); border-radius: 4px; }
         }
 
         /* Signals display */
@@ -335,7 +337,6 @@
             display: none;
         }
 
-        /* Loading spinner */
         .spinner {
             display: none;
             width: 50px;
@@ -349,7 +350,7 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Calendar events layout */
+        /* Calendar events layout matching official Forex Factory colors */
         .table-container {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
@@ -380,8 +381,38 @@
 
         tr:last-child td { border-bottom: none; }
 
-        .impact-high { background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
-        .impact-med { background: rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 0.25rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.75rem; }
+        /* Impact Badges based on Forex Factory */
+        .impact-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .impact-high { background: #ff4a4a; color: white; }
+        .impact-medium { background: #ff9800; color: white; }
+        .impact-low { background: #ffd600; color: black; }
+        .impact-none { background: #8e8e93; color: white; }
+
+        /* Filter header for calendar */
+        .calendar-filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .filter-input {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            outline: none;
+        }
 
         /* News sentiments layout */
         .news-grid {
@@ -510,7 +541,7 @@
             </div>
         </header>
 
-        <div class="main-content">
+        <div class="main-content" id="workspace-scroller">
             <!-- PAGE 1: Signals Board -->
             <div class="page-panel active" id="page-signals">
                 <div class="category-tabs">
@@ -545,7 +576,18 @@
 
             <!-- PAGE 3: Economic Calendar -->
             <div class="page-panel" id="page-calendar">
-                <h2 style="font-size: 1.5rem; font-weight: 700;">Upcoming High-Impact Economic Events</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="font-size: 1.5rem; font-weight: 700;">Economic Calendar (This Week)</h2>
+                    <div class="calendar-filters">
+                        <input type="text" class="filter-input" id="cal-search" placeholder="Search Currency..." oninput="filterCalendar()" />
+                        <select class="filter-input" id="cal-impact" onchange="filterCalendar()">
+                            <option value="ALL">All Impacts</option>
+                            <option value="HIGH">High Impact</option>
+                            <option value="MEDIUM">Medium Impact</option>
+                            <option value="LOW">Low Impact</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -606,13 +648,17 @@
     <script>
         let currentTab = 'ALL';
         let allSignals = [];
+        let allEvents = [];
 
-        // Navigation
+        // Navigation & Page Scroll Reset
         function switchPage(pageId, element) {
             document.querySelectorAll(".page-panel").forEach(p => p.classList.remove("active"));
             document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
             document.getElementById(pageId).classList.add("active");
             element.classList.add("active");
+            
+            // Smoothly scroll back to the top of the main container when switching pages
+            document.getElementById("workspace-scroller").scrollTop = 0;
         }
 
         // Theme Toggle
@@ -638,7 +684,6 @@
             if (sym.includes("/") || sym.includes("USD") || sym.includes("EUR") || sym.includes("GBP") || sym.includes("JPY") || sym.includes("AUD") || sym.includes("CAD")) {
                 return 'FOREX';
             }
-            // Defaults to US market for standard single symbol strings
             return 'US';
         }
 
@@ -739,7 +784,6 @@
             resultBox.innerHTML = "";
 
             try {
-                // Map user symbols (e.g. XAU/USD -> GC=F, EUR/USD -> EURUSD=X)
                 let yfSymbol = symbol;
                 if (symbol.toUpperCase() === "XAU/USD" || symbol.toUpperCase() === "GOLD") yfSymbol = "GC=F";
                 else if (symbol.toUpperCase() === "XAG/USD" || symbol.toUpperCase() === "SILVER") yfSymbol = "SI=F";
@@ -808,36 +852,52 @@
             }
         }
 
-        // Load Economic Calendar
+        // Load & Filter Economic Calendar Events (matching Forex Factory layout)
         async function loadCalendar() {
             try {
                 const res = await fetch("/api/calendar");
-                const data = await res.json();
-                
-                const container = document.getElementById("calendar-container");
-                container.innerHTML = "";
-                
-                if (data.length === 0) {
-                    container.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No upcoming calendar events.</td></tr>`;
-                    return;
-                }
-
-                data.forEach(ev => {
-                    const impactClass = ev.impact.toUpperCase() === "HIGH" ? "impact-high" : "impact-med";
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td style="font-weight: 600;">${ev.date} ${ev.time}</td>
-                        <td style="font-weight: 700; color: var(--neon-accent);">${ev.country}</td>
-                        <td style="font-weight: 600;">${ev.title}</td>
-                        <td><span class="${impactClass}">${ev.impact}</span></td>
-                        <td style="font-weight: 600;">${ev.forecast}</td>
-                        <td style="font-weight: 600; color: var(--text-muted);">${ev.previous}</td>
-                    `;
-                    container.appendChild(row);
-                });
+                allEvents = await res.json();
+                filterCalendar();
             } catch (e) {
                 console.error("Failed to load calendar:", e);
             }
+        }
+
+        function filterCalendar() {
+            const query = document.getElementById("cal-search").value.trim().toUpperCase();
+            const impactFilter = document.getElementById("cal-impact").value;
+            const container = document.getElementById("calendar-container");
+            container.innerHTML = "";
+
+            const filtered = allEvents.filter(ev => {
+                const matchQuery = !query || ev.country.includes(query) || ev.title.toUpperCase().includes(query);
+                const matchImpact = impactFilter === 'ALL' || ev.impact.toUpperCase() === impactFilter;
+                return matchQuery && matchImpact;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No calendar events matching filters.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(ev => {
+                const imp = ev.impact.toLowerCase();
+                let badgeClass = "impact-none";
+                if (imp === "high") badgeClass = "impact-high";
+                else if (imp === "medium") badgeClass = "impact-medium";
+                else if (imp === "low") badgeClass = "impact-low";
+
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td style="font-weight: 600;">${ev.date} ${ev.time}</td>
+                    <td style="font-weight: 700; color: var(--neon-accent);">${ev.country}</td>
+                    <td style="font-weight: 600;">${ev.title}</td>
+                    <td><span class="impact-badge ${badgeClass}">${ev.impact}</span></td>
+                    <td style="font-weight: 600;">${ev.forecast}</td>
+                    <td style="font-weight: 600; color: var(--text-muted);">${ev.previous}</td>
+                `;
+                container.appendChild(row);
+            });
         }
 
         // Load Sentiment News
