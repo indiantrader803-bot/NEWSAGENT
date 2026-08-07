@@ -1706,12 +1706,14 @@ def generate_asset_trade_setup(asset: str, question: str) -> str | None:
 def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
     if not GROQ_API_KEY:
         return None
+    import requests
+    messages: list[dict] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    # Try Llama 3.3 70B first
     try:
-        import requests
-        messages: list[dict] = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
         resp = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
@@ -1724,11 +1726,31 @@ def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
             },
             timeout=15,
         )
+        if resp.status_code == 429:
+            raise Exception("Rate limit hit, falling back")
         resp.raise_for_status()
         text = resp.json()["choices"][0]["message"]["content"].strip()
         return escape(text)
     except Exception:
-        return None
+        # Fallback to high-rate-limit 8B model
+        try:
+            resp = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": messages,
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            text = resp.json()["choices"][0]["message"]["content"].strip()
+            return escape(text)
+        except Exception:
+            return None
 
 
 # ── Finnhub API helpers ──────────────────────────────────────────────────────
@@ -4240,6 +4262,8 @@ async def handle_health_check(reader, writer):
                     f"'direction', 'entry', 'sl', 'tp1', 'tp2', 'confidence', 'reason'."
                 )
                 raw_ai_res = _groq_chat(prompt)
+                if not raw_ai_res:
+                    raise Exception("Too Many Requests. Rate limited. Try after a while.")
                 import re
                 json_match = re.search(r'\{.*\}', raw_ai_res, re.DOTALL)
                 if json_match:

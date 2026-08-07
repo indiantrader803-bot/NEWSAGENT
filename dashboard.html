@@ -875,10 +875,13 @@
             resultBox.innerHTML = "";
 
             try {
-                let yfSymbol = symbol;
-                if (symbol.toUpperCase() === "XAU/USD" || symbol.toUpperCase() === "GOLD") yfSymbol = "GC=F";
-                else if (symbol.toUpperCase() === "XAG/USD" || symbol.toUpperCase() === "SILVER") yfSymbol = "SI=F";
-                else if (symbol.includes("/")) yfSymbol = symbol.replace("/", "") + "=X";
+                let cleanSym = symbol.toUpperCase().replace("/", "").trim();
+                let yfSymbol = cleanSym;
+                if (cleanSym === "XAUUSD" || cleanSym === "GOLD" || cleanSym === "XAU") yfSymbol = "GC=F";
+                else if (cleanSym === "XAGUSD" || cleanSym === "SILVER" || cleanSym === "XAG") yfSymbol = "SI=F";
+                else if (cleanSym.length === 6) {
+                    yfSymbol = cleanSym + "=X";
+                }
 
                 const response = await fetch(`/api/analyze?symbol=${encodeURIComponent(yfSymbol)}`);
                 const data = await response.json();
