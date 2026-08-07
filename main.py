@@ -4338,7 +4338,87 @@ async def handle_health_check(reader, writer):
                 response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/indian-intel":
+        try:
+            import indian_scoring as iscoring
+            intel = iscoring.get_full_intel()
+            response_body = json.dumps(intel)
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/verdict":
+        try:
+            import indian_scoring as iscoring
+            fii_data = iscoring.fetch_fii_dii_flow()
+            scan_results = iscoring.scan_nifty100(fii_net=fii_data.get("fii_net", 0.0), limit=5)
+            verdict = iscoring.generate_daily_verdict(scan_results, fii_data.get("fii_net", 0.0))
+            response_body = json.dumps(verdict)
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/deep-analyze":
+        symbol = query_params.get("symbol", [""])[0].strip()
+        if not symbol:
+            response_body = json.dumps({"error": "symbol parameter required. e.g. /api/deep-analyze?symbol=RELIANCE.NS"})
+        else:
+            try:
+                import multi_agent_analysis as maa
+                result = maa.run_deep_analysis(symbol)
+                response_body = json.dumps(result)
+            except Exception as e:
+                response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/performance":
+        try:
+            import yfinance as yf
+            signals = load_signal_log()
+            wins, losses, total = 0, 0, 0
+            pair_stats: dict = {}
+            for sig in signals[-60:]:
+                ticker = sig.get("pair", "")
+                tp1_str = sig.get("tp1", "")
+                sl_str = sig.get("sl", "")
+                if not ticker or not tp1_str or not sl_str:
+                    continue
+                try:
+                    tp1 = float(tp1_str)
+                    sl = float(sl_str)
+                    hist = yf.Ticker(ticker).history(period="5d")
+                    if hist.empty:
+                        continue
+                    hit_tp = bool((hist["High"] >= tp1).any())
+                    hit_sl = bool((hist["Low"] <= sl).any())
+                    won = hit_tp and not hit_sl
+                    total += 1
+                    if won:
+                        wins += 1
+                    else:
+                        losses += 1
+                    if ticker not in pair_stats:
+                        pair_stats[ticker] = {"wins": 0, "total": 0}
+                    pair_stats[ticker]["total"] += 1
+                    if won:
+                        pair_stats[ticker]["wins"] += 1
+                except Exception:
+                    continue
+            win_rate = round((wins / total * 100), 1) if total > 0 else 0
+            best_pair = max(pair_stats, key=lambda k: pair_stats[k]["wins"], default="—")
+            response_body = json.dumps({
+                "win_rate": win_rate,
+                "wins": wins,
+                "losses": losses,
+                "total": total,
+                "best_pair": best_pair,
+            })
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
     elif path_only == "/" or path_only == "/dashboard":
+
         try:
             with open("dashboard.html", "r", encoding="utf-8") as f:
                 response_body = f.read()

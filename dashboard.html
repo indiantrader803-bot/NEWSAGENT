@@ -6,7 +6,7 @@
     <title>LiveForexSignals.AI — Professional Trader Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <meta name="color-scheme" content="dark light">
     <script>
         const theme = localStorage.getItem("theme") || "dark";
@@ -14,7 +14,16 @@
     </script>
     <style>
         :root {
-            --font-family: 'Outfit', sans-serif;
+            --font-family: 'Inter', 'Outfit', sans-serif;
+            /* Emil Kowalski animation tokens */
+            --ease-out: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+            --dur-fast: 120ms;
+            --dur-base: 200ms;
+            --dur-slow: 300ms;
+            /* Fintech gain/loss tokens */
+            --gain: #00c853;
+            --loss: #ff3d3d;
             --bg-color-dark: #05070f;
             --bg-color-light: #f3f5fa;
             --card-bg-dark: rgba(11, 15, 30, 0.75);
@@ -123,6 +132,68 @@
             background: rgba(99, 102, 241, 0.12);
             color: var(--text-color);
             border-left: 3px solid var(--neon-accent);
+        }
+
+        /* Tabular numbers for all financial data */
+        .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+        /* Live pulse indicator */
+        .live-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--gain);
+            animation: pulse-live 2s ease-in-out infinite;
+            margin-right: 6px;
+        }
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* Price flash animations */
+        @keyframes flash-gain {
+            0% { background: transparent; }
+            20% { background: rgba(0, 200, 83, 0.18); }
+            100% { background: transparent; }
+        }
+        @keyframes flash-loss {
+            0% { background: transparent; }
+            20% { background: rgba(255, 61, 61, 0.18); }
+            100% { background: transparent; }
+        }
+        .flash-gain { animation: flash-gain 600ms var(--ease-out); }
+        .flash-loss { animation: flash-loss 600ms var(--ease-out); }
+
+        /* Card hover with spring feel */
+        .signal-card, .intel-card, .deep-card {
+            transition: transform var(--dur-base) var(--ease-out),
+                        box-shadow var(--dur-base) var(--ease-out);
+        }
+
+        /* Skeleton loader shimmer */
+        @keyframes shimmer {
+            0% { background-position: -400px 0; }
+            100% { background-position: 400px 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg,
+                rgba(255,255,255,0.04) 25%,
+                rgba(255,255,255,0.10) 37%,
+                rgba(255,255,255,0.04) 63%);
+            background-size: 400px 100%;
+            animation: shimmer 1.5s ease-in-out infinite;
+            border-radius: 8px;
+            height: 18px;
+        }
+
+        /* Stagger entrance for cards */
+        @keyframes card-in {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .card-animate {
+            animation: card-in var(--dur-slow) var(--ease-out) both;
         }
 
         /* Telegram sidebar promo card */
@@ -606,6 +677,12 @@
             <li class="nav-item" onclick="switchPage('page-subscribe', this)">
                 💳 Subscribe Tier
             </li>
+            <li class="nav-item" onclick="switchPage('page-indian-intel', this); loadIndianIntel();">
+                🇮🇳 Indian Intel
+            </li>
+            <li class="nav-item" onclick="switchPage('page-deep-analysis', this)">
+                🧠 Deep Analysis
+            </li>
         </ul>
 
         <!-- TELEGRAM BOT PROMO CARD -->
@@ -707,6 +784,105 @@
                 </div>
             </div>
 
+            <!-- PAGE 6: Indian Market Intelligence -->
+            <div class="page-panel" id="page-indian-intel">
+                <!-- Verdict Banner -->
+                <div id="intel-verdict-banner" style="
+                    border-radius: 18px; padding: 1.5rem 2rem;
+                    display: flex; align-items: center; gap: 1.5rem;
+                    background: var(--card-bg); border: 1px solid var(--card-border);
+                    backdrop-filter: var(--glass-blur);
+                ">
+                    <div id="intel-verdict-emoji" style="font-size: 2.8rem; line-height: 1;">⏳</div>
+                    <div style="flex:1;">
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 4px;">Daily Market Verdict</div>
+                        <div id="intel-verdict-text" style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em;">Loading…</div>
+                        <div id="intel-verdict-reason" style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;"></div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">F&O Expiry</div>
+                        <div id="intel-fno-days" class="num" style="font-size: 1.4rem; font-weight: 700; color: var(--neon-accent);">—</div>
+                        <div style="font-size: 0.72rem; color: var(--text-muted);">days away</div>
+                    </div>
+                </div>
+
+                <!-- FII/DII Strip -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem 1.5rem; backdrop-filter: var(--glass-blur);">
+                        <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted);">FII Net Flow (Today)</div>
+                        <div id="intel-fii-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px;">—</div>
+                        <div id="intel-fii-status" style="font-size: 0.82rem; margin-top: 2px; color: var(--text-muted);"></div>
+                    </div>
+                    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem 1.5rem; backdrop-filter: var(--glass-blur);">
+                        <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted);">DII Net Flow (Today)</div>
+                        <div id="intel-dii-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px;">—</div>
+                        <div id="intel-dii-status" style="font-size: 0.82rem; margin-top: 2px; color: var(--text-muted);"></div>
+                    </div>
+                </div>
+
+                <!-- NIFTY 100 Scanner Table -->
+                <div>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">
+                        <span class="live-dot"></span> NIFTY 100 Signal Scanner
+                    </h3>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr>
+                                <th>Stock</th>
+                                <th>Sector</th>
+                                <th>Price ₹</th>
+                                <th>Change</th>
+                                <th>RSI</th>
+                                <th>Score</th>
+                                <th>Rating</th>
+                                <th>Key Signals</th>
+                            </tr></thead>
+                            <tbody id="intel-scan-table">
+                                <tr><td colspan="8" style="text-align:center; padding:2rem; color:var(--text-muted);">⏳ Loading scanner…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Sector Summary -->
+                <div>
+                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">📊 Sector Scores</h3>
+                    <div id="intel-sectors" style="display: flex; flex-wrap: wrap; gap: 0.75rem;"></div>
+                </div>
+            </div>
+
+            <!-- PAGE 7: Deep Analysis (Multi-Agent) -->
+            <div class="page-panel" id="page-deep-analysis">
+                <div style="max-width: 760px; margin: 0 auto; width: 100%;">
+                    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">🧠 Multi-Agent Deep Analysis</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                        Runs a 5-agent AI pipeline: Technical Analyst → Bull Researcher → Bear Researcher → Lead Researcher → Trader.
+                        Enter any symbol — Indian stocks (<code>RELIANCE.NS</code>), Forex (<code>EURUSD=X</code>), Crypto (<code>BTC-USD</code>).
+                    </p>
+                    <div class="input-group" style="margin-bottom: 1.5rem;">
+                        <input type="text" class="txt-symbol" id="deep-symbol-input" placeholder="e.g. RELIANCE.NS or EURUSD=X…" />
+                        <button class="btn-analyze" id="deep-analyze-btn" onclick="runDeepAnalysis()">Run Deep Analysis</button>
+                    </div>
+
+                    <!-- Progress stepper -->
+                    <div id="deep-stepper" style="display:none; margin-bottom:1.5rem;">
+                        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                            <span id="step-technical" class="deep-step">📊 Technical</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-bull" class="deep-step">🐂 Bull Case</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-bear" class="deep-step">🐻 Bear Case</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-judge" class="deep-step">⚖️ Synthesis</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-trader" class="deep-step">💼 Trade</span>
+                        </div>
+                    </div>
+
+                    <div id="deep-result"></div>
+                </div>
+            </div>
+
             <!-- PAGE 5: Subscribe & Monetization -->
             <div class="page-panel" id="page-subscribe">
                 <h2 style="font-size: 1.6rem; font-weight: 700; text-align: center; margin-bottom: 1rem;">Unlock Premium AI Trader Signals</h2>
@@ -741,6 +917,41 @@
         let currentTab = 'ALL';
         let allSignals = [];
         let allEvents = [];
+        let intelLoaded = false;
+
+        // Deep Analysis step styles
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          .deep-step {
+            padding: 0.3rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--card-border);
+            background: var(--card-bg);
+            color: var(--text-muted);
+            transition: all 200ms var(--ease-out);
+          }
+          .deep-step.active {
+            background: var(--neon-accent);
+            color: white;
+            border-color: var(--neon-accent);
+          }
+          .deep-step.done {
+            background: rgba(16,185,129,0.15);
+            color: #10b981;
+            border-color: #10b981;
+          }
+          .bull-card { background: rgba(0,200,83,0.07); border: 1px solid rgba(0,200,83,0.2); border-radius:14px; padding:1.2rem; }
+          .bear-card { background: rgba(255,61,61,0.07); border: 1px solid rgba(255,61,61,0.2); border-radius:14px; padding:1.2rem; }
+          .synth-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius:14px; padding:1.2rem; }
+          .trade-verdict-card { border-radius:16px; padding:1.5rem 2rem; text-align:center; }
+          .trade-verdict-card.buy { background: rgba(0,200,83,0.1); border: 2px solid var(--gain); }
+          .trade-verdict-card.sell { background: rgba(255,61,61,0.1); border: 2px solid var(--loss); }
+          .trade-verdict-card.neutral { background: rgba(99,102,241,0.1); border: 2px solid var(--neon-accent); }
+          .intel-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius:14px; padding:1.2rem 1.5rem; backdrop-filter: var(--glass-blur); }
+        `;
+        document.head.appendChild(styleEl);
 
         // Navigation
         function switchPage(pageId, element) {
@@ -1087,6 +1298,189 @@
             }
         }
 
+        // ── Indian Market Intelligence ──────────────────────────────────────
+        async function loadIndianIntel() {
+            if (intelLoaded) return;
+            try {
+                const res = await fetch('/api/indian-intel');
+                const data = await res.json();
+                if (data.error) { console.error('Intel error:', data.error); return; }
+
+                // Verdict banner
+                const v = data.verdict || {};
+                const verdictEl = document.getElementById('intel-verdict-text');
+                const emojiEl = document.getElementById('intel-verdict-emoji');
+                const reasonEl = document.getElementById('intel-verdict-reason');
+                const banner = document.getElementById('intel-verdict-banner');
+                verdictEl.textContent = (v.emoji || '') + ' ' + (v.verdict || '—');
+                emojiEl.style.display = 'none';
+                reasonEl.textContent = v.reason || '';
+                if (v.color === 'green') banner.style.borderColor = 'var(--gain)';
+                else if (v.color === 'red') banner.style.borderColor = 'var(--loss)';
+                else banner.style.borderColor = '#f59e0b';
+
+                // FII/DII
+                const fii = data.fii || {};
+                const fiiVal = parseFloat(fii.fii_net || 0);
+                const diiVal = parseFloat(fii.dii_net || 0);
+                const fiiEl = document.getElementById('intel-fii-val');
+                const diiEl = document.getElementById('intel-dii-val');
+                fiiEl.textContent = (fiiVal >= 0 ? '+' : '') + '₹' + Math.abs(fiiVal).toLocaleString('en-IN') + ' Cr';
+                fiiEl.style.color = fiiVal >= 0 ? 'var(--gain)' : 'var(--loss)';
+                diiEl.textContent = (diiVal >= 0 ? '+' : '') + '₹' + Math.abs(diiVal).toLocaleString('en-IN') + ' Cr';
+                diiEl.style.color = diiVal >= 0 ? 'var(--gain)' : 'var(--loss)';
+                document.getElementById('intel-fii-status').textContent = 'FII ' + (fii.fii_status || '') + (fii.date ? ' · ' + fii.date : '');
+                document.getElementById('intel-dii-status').textContent = 'DII ' + (fii.dii_status || '');
+
+                // F&O days
+                document.getElementById('intel-fno-days').textContent = data.fno_days ?? '—';
+
+                // NIFTY Scanner Table
+                const scanTable = document.getElementById('intel-scan-table');
+                scanTable.innerHTML = '';
+                const scan = data.scan || [];
+                if (scan.length === 0) {
+                    scanTable.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">No strong signals found today.</td></tr>';
+                } else {
+                    scan.forEach((s, i) => {
+                        const changeColor = s.change_pct >= 0 ? 'var(--gain)' : 'var(--loss)';
+                        const scoreColor = s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--text-muted)';
+                        const rsiColor = s.rsi < 35 ? 'var(--gain)' : s.rsi > 65 ? 'var(--loss)' : 'inherit';
+                        const row = document.createElement('tr');
+                        row.className = 'card-animate';
+                        row.style.animationDelay = (i * 40) + 'ms';
+                        row.innerHTML = `
+                            <td style="font-weight:700; color:var(--neon-accent);">${s.ticker}</td>
+                            <td style="font-size:0.8rem; color:var(--text-muted);">${s.sector || '—'}</td>
+                            <td class="num" style="font-weight:600;">₹${(s.price || 0).toLocaleString('en-IN')}</td>
+                            <td class="num" style="font-weight:600; color:${changeColor};">${s.change_pct >= 0 ? '+' : ''}${s.change_pct}%</td>
+                            <td class="num" style="color:${rsiColor}; font-weight:600;">${s.rsi}</td>
+                            <td class="num" style="font-weight:700; color:${scoreColor};">${s.score >= 0 ? '+' : ''}${s.score}</td>
+                            <td><span style="padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;
+                                background:${s.score >= 2 ? 'rgba(0,200,83,0.15)' : s.score <= -2 ? 'rgba(255,61,61,0.15)' : 'rgba(99,102,241,0.12)'};
+                                color:${s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--neon-accent)'};">${s.badge || ''} ${s.rating}</span></td>
+                            <td style="font-size:0.78rem; color:var(--text-muted); max-width:180px;">${(s.signals || []).slice(0,2).join(', ')}</td>
+                        `;
+                        scanTable.appendChild(row);
+                    });
+                }
+
+                // Sector Summary
+                const sectorEl = document.getElementById('intel-sectors');
+                sectorEl.innerHTML = '';
+                const sectors = data.sector_summary || {};
+                Object.entries(sectors).sort((a,b) => b[1]-a[1]).forEach(([sec, score]) => {
+                    const chip = document.createElement('div');
+                    chip.style.cssText = `padding:0.4rem 0.9rem; border-radius:20px; font-size:0.8rem; font-weight:600;
+                        border:1px solid ${score >= 1 ? 'rgba(0,200,83,0.3)' : score <= -1 ? 'rgba(255,61,61,0.3)' : 'var(--card-border)'};
+                        background:${score >= 1 ? 'rgba(0,200,83,0.08)' : score <= -1 ? 'rgba(255,61,61,0.08)' : 'var(--card-bg)'};
+                        color:${score >= 1 ? 'var(--gain)' : score <= -1 ? 'var(--loss)' : 'var(--text-muted)'};`;
+                    chip.textContent = sec + ' ' + (score >= 0 ? '+' : '') + score;
+                    sectorEl.appendChild(chip);
+                });
+
+                intelLoaded = true;
+            } catch(e) {
+                console.error('Failed to load Indian Intel:', e);
+            }
+        }
+
+        // ── Deep Analysis (Multi-Agent) ─────────────────────────────────────
+        async function runDeepAnalysis() {
+            const symbol = document.getElementById('deep-symbol-input').value.trim();
+            if (!symbol) { alert('Enter a symbol first.'); return; }
+
+            const btn = document.getElementById('deep-analyze-btn');
+            const stepper = document.getElementById('deep-stepper');
+            const result = document.getElementById('deep-result');
+            const steps = ['step-technical','step-bull','step-bear','step-judge','step-trader'];
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Running 5-agent pipeline…';
+            stepper.style.display = 'block';
+            result.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:2rem;">⏳ AI agents are analysing — this takes ~30 seconds…</div>';
+            steps.forEach(s => { const el = document.getElementById(s); el.className = 'deep-step'; });
+
+            // Animate steps forward while waiting
+            let stepIdx = 0;
+            const stepInterval = setInterval(() => {
+                if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).className = 'deep-step done';
+                if (stepIdx < steps.length) document.getElementById(steps[stepIdx]).className = 'deep-step active';
+                stepIdx++;
+                if (stepIdx > steps.length) clearInterval(stepInterval);
+            }, 5000);
+
+            try {
+                const res = await fetch(`/api/deep-analyze?symbol=${encodeURIComponent(symbol)}`);
+                const data = await res.json();
+                clearInterval(stepInterval);
+                steps.forEach(s => document.getElementById(s).className = 'deep-step done');
+                btn.disabled = false;
+                btn.textContent = 'Run Deep Analysis';
+
+                if (data.error) {
+                    result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ ${data.error}</div>`;
+                    return;
+                }
+
+                const dir = (data.direction || 'NEUTRAL').toUpperCase();
+                const isBuy = dir === 'BUY';
+                const isSell = dir === 'SELL';
+                const verdictClass = isBuy ? 'buy' : isSell ? 'sell' : 'neutral';
+                const verdictColor = isBuy ? 'var(--gain)' : isSell ? 'var(--loss)' : 'var(--neon-accent)';
+
+                result.innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:1rem;" class="card-animate">
+                        <!-- Price Summary -->
+                        <div style="font-size:0.82rem;color:var(--text-muted);padding:0.75rem 1rem;background:var(--card-bg);border-radius:10px;border:1px solid var(--card-border);white-space:pre-line;">${data.price_data}</div>
+
+                        <!-- Technical Report -->
+                        <div class="synth-card">
+                            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:8px;">📊 Technical Analyst</div>
+                            <p style="font-size:0.88rem;line-height:1.6;">${data.technical_report}</p>
+                        </div>
+
+                        <!-- Bull & Bear side by side -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                            <div class="bull-card">
+                                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--gain);margin-bottom:8px;">🐂 Bull Case</div>
+                                <p style="font-size:0.86rem;line-height:1.6;">${data.bull_thesis}</p>
+                            </div>
+                            <div class="bear-card">
+                                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--loss);margin-bottom:8px;">🐻 Bear Case</div>
+                                <p style="font-size:0.86rem;line-height:1.6;">${data.bear_thesis}</p>
+                            </div>
+                        </div>
+
+                        <!-- Synthesis -->
+                        <div class="synth-card">
+                            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--neon-accent);margin-bottom:8px;">⚖️ Research Synthesis</div>
+                            <p style="font-size:0.88rem;line-height:1.6;">${data.research_summary}</p>
+                        </div>
+
+                        <!-- Trade Verdict -->
+                        <div class="trade-verdict-card ${verdictClass}">
+                            <div style="font-size:2rem;font-weight:800;color:${verdictColor};">${dir}</div>
+                            <div style="font-size:0.9rem;color:var(--text-muted);margin:0.5rem 0;">${data.reason}</div>
+                            <div style="display:flex;justify-content:center;gap:2rem;margin-top:1rem;flex-wrap:wrap;">
+                                <div><div style="font-size:0.7rem;color:var(--text-muted);">CONFIDENCE</div><div class="num" style="font-weight:700;font-size:1.2rem;">${data.confidence}</div></div>
+                                <div><div style="font-size:0.7rem;color:var(--text-muted);">ENTRY</div><div class="num" style="font-weight:700;font-size:1.2rem;">${data.entry}</div></div>
+                                <div><div style="font-size:0.7rem;color:var(--text-muted);">STOP LOSS</div><div class="num" style="font-weight:700;font-size:1.2rem;color:var(--loss);">${data.sl}</div></div>
+                                <div><div style="font-size:0.7rem;color:var(--text-muted);">TP 1</div><div class="num" style="font-weight:700;font-size:1.2rem;color:var(--gain);">${data.tp1}</div></div>
+                                <div><div style="font-size:0.7rem;color:var(--text-muted);">TP 2</div><div class="num" style="font-weight:700;font-size:1.2rem;color:var(--gain);">${data.tp2}</div></div>
+                            </div>
+                        </div>
+                        <div style="font-size:0.72rem;color:var(--text-muted);text-align:right;">Generated: ${data.generated_at}</div>
+                    </div>
+                `;
+            } catch(e) {
+                clearInterval(stepInterval);
+                btn.disabled = false;
+                btn.textContent = 'Run Deep Analysis';
+                result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ Network error. Try again.</div>`;
+            }
+        }
+
         // Initial Data Fetch & Page Polls
         loadSignals();
         loadCalendar();
@@ -1096,5 +1490,6 @@
         setInterval(loadCalendar, 60000);
         setInterval(loadNews, 30000);
     </script>
+
 </body>
 </html>
