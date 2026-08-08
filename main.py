@@ -4237,14 +4237,34 @@ async def handle_health_check(reader, writer):
         req_text = request.decode("utf-8", errors="ignore")
         first_line = req_text.split("\r\n")[0] if req_text else ""
         parts = first_line.split()
+        method = parts[0] if len(parts) > 0 else "GET"
         path = parts[1] if len(parts) > 1 else "/"
     except Exception:
+        method = "GET"
         path = "/"
 
     from urllib.parse import urlparse, parse_qs
     parsed_url = urlparse(path)
     path_only = parsed_url.path
     query_params = parse_qs(parsed_url.query)
+
+    if method == "OPTIONS":
+        response_header = (
+            f"HTTP/1.1 204 No Content\r\n"
+            f"Access-Control-Allow-Origin: *\r\n"
+            f"Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+            f"Access-Control-Allow-Headers: Content-Type\r\n"
+            f"Connection: close\r\n\r\n"
+        )
+        try:
+            writer.write(response_header.encode("utf-8"))
+            await writer.drain()
+            writer.close()
+            await writer.wait_closed()
+        except Exception:
+            pass
+        return
+
 
     if path_only == "/api/signals":
         signals = load_signal_log()
@@ -4434,6 +4454,9 @@ async def handle_health_check(reader, writer):
         f"HTTP/1.1 200 OK\r\n"
         f"Content-Type: {content_type}; charset=utf-8\r\n"
         f"Content-Length: {len(response_bytes)}\r\n"
+        f"Access-Control-Allow-Origin: *\r\n"
+        f"Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+        f"Access-Control-Allow-Headers: Content-Type\r\n"
         f"Connection: close\r\n\r\n"
     )
     try:
