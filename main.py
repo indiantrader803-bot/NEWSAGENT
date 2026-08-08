@@ -57,6 +57,7 @@ TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "forex crypto stocks in
 SENT_KEYS_FILE = "sent_articles.json"
 SIGNAL_LOG_FILE = "signal_log.json"
 SUBSCRIBERS_FILE = "subscribers.json"
+SENT_MESSAGES_FILE = "sent_messages.json"
 _seen_keys: set[str] = set()
 _signal_log: list[dict] = []
 _subscribers: list[int] = []
@@ -984,6 +985,22 @@ def save_seen_keys(keys: set[str]) -> None:
         json.dump(sorted(keys), f)
 
 
+def load_sent_messages_cache() -> list[str]:
+    try:
+        with open(SENT_MESSAGES_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_sent_messages_cache(cache: list[str]) -> None:
+    try:
+        with open(SENT_MESSAGES_FILE, "w") as f:
+            json.dump(cache, f, indent=2)
+    except Exception:
+        pass
+
+
 def load_signal_log() -> list[dict]:
     try:
         with open(SIGNAL_LOG_FILE) as f:
@@ -1034,6 +1051,25 @@ def _backfill_subscribers_from_updates() -> None:
 
 def log_signal(pair: str, direction: str, entry: float, tp1: float, tp2: float, sl: float, source: str) -> None:
     global _signal_log
+    
+    # Check for duplicates in the last 12 hours
+    now = datetime.now(timezone.utc)
+    for sig in reversed(_signal_log):
+        try:
+            sig_date = sig.get("date", "")
+            sig_time = sig.get("time", "").replace(" UTC", "")
+            sig_dt = datetime.strptime(f"{sig_date} {sig_time}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+            if (now - sig_dt).total_seconds() < 43200:
+                if sig.get("pair") == pair and sig.get("direction") == direction:
+                    # Suppress if entry price difference is less than 0.5%
+                    entry_diff = abs(float(sig.get("entry", 0)) - entry)
+                    pct_diff = (entry_diff / entry) if entry else 0
+                    if pct_diff < 0.005:
+                        print(f"[LOG SIGNAL] Suppressed duplicate signal for {pair} {direction} at {entry}")
+                        return
+        except Exception:
+            pass
+
     record = {
         "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "time": datetime.now(timezone.utc).strftime("%H:%M UTC"),
@@ -3509,6 +3545,29 @@ def try_render_text_to_card(text: str) -> Any:
 
 async def broadcast(bot: Bot, text: str, parse_mode: str = "Markdown", disable_web_page_preview: bool = True) -> int:
     global _subscribers
+    
+    # Prevent duplicate messages within 50 recent messages
+    sent_cache = load_sent_messages_cache()
+    
+    def clean_text_for_compare(t: str) -> str:
+        import re
+        t = re.sub(r'[^a-zA-Z0-9]', '', t.lower())
+        # strip dynamic parts like date/time
+        t = re.sub(r'updated\d{4}.*|time\d{4}.*', '', t)
+        return t
+        
+    cleaned_current = clean_text_for_compare(text)
+    if cleaned_current:
+        for sent_msg in sent_cache:
+            if clean_text_for_compare(sent_msg) == cleaned_current:
+                print("[BROADCAST] Suppressed duplicate Telegram message.")
+                return 0
+                
+        sent_cache.append(text)
+        if len(sent_cache) > 50:
+            sent_cache.pop(0)
+        save_sent_messages_cache(sent_cache)
+
     sent = 0
     targets: list[int | str] = list(_subscribers)
     if TELEGRAM_CHAT_ID:
