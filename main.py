@@ -1004,7 +1004,22 @@ def save_sent_messages_cache(cache: list[str]) -> None:
 def load_signal_log() -> list[dict]:
     try:
         with open(SIGNAL_LOG_FILE) as f:
-            return json.load(f)
+            data = json.load(f)
+        seen = set()
+        unique_data = []
+        has_duplicates = False
+        for sig in data:
+            key = (sig.get("pair"), sig.get("direction"), sig.get("entry"), sig.get("tp1"), sig.get("sl"))
+            if key not in seen:
+                seen.add(key)
+                unique_data.append(sig)
+            else:
+                has_duplicates = True
+        if has_duplicates:
+            with open(SIGNAL_LOG_FILE, "w") as f:
+                json.dump(unique_data, f, indent=2)
+            print("[CLEANUP] Automatically removed duplicates from signal_log.json.")
+        return unique_data
     except (FileNotFoundError, json.JSONDecodeError):
         return []
 

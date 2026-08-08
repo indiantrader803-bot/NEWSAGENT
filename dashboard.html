@@ -1175,7 +1175,17 @@
             const container = document.getElementById("signals-container");
             container.innerHTML = "";
             
-            const filtered = allSignals.filter(s => {
+            const uniqueSignals = [];
+            const seen = new Set();
+            allSignals.forEach(s => {
+                const key = `${s.pair}_${s.direction}_${s.entry}_${s.tp1}_${s.sl}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueSignals.push(s);
+                }
+            });
+            
+            const filtered = uniqueSignals.filter(s => {
                 if (currentTab === 'ALL') return true;
                 return classifySignal(s) === currentTab;
             });
