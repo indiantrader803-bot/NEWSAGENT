@@ -4412,6 +4412,21 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/test-telegram":
+        try:
+            from telegram import Bot
+            if BOT_TOKEN:
+                bot = Bot(token=BOT_TOKEN)
+                test_msg = "🔔 <b>Test Telegram Connection</b>\n\nYour white-label Trading Dashboard is successfully connected to Telegram! Ready to broadcast real-time signals."
+                sent = await broadcast(bot, test_msg, parse_mode="HTML")
+                response_body = json.dumps({"success": True, "sent_count": sent})
+            else:
+                response_body = json.dumps({"error": "BOT_TOKEN not configured in environment."})
+            content_type = "application/json"
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+            content_type = "application/json"
+
     elif path_only == "/api/news":
         try:
             articles = fetch_latest_articles()[:20]

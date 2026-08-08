@@ -811,6 +811,9 @@
             <li class="nav-item" onclick="switchPage('page-deep-analysis', this)">
                 🧠 Deep Analysis
             </li>
+            <li class="nav-item" onclick="switchPage('page-tools', this)">
+                🛠️ Trading Toolkit
+            </li>
         </ul>
 
         <!-- TELEGRAM BOT PROMO CARD -->
@@ -857,12 +860,15 @@
         <div class="main-content">
             <!-- PAGE 1: Signals Board -->
             <div class="page-panel active" id="page-signals">
-                <div class="category-tabs">
-                    <button class="cat-tab active" onclick="filterCategory('ALL', this)">All</button>
-                    <button class="cat-tab" onclick="filterCategory('FOREX', this)">Forex</button>
-                    <button class="cat-tab" onclick="filterCategory('COMMODITIES', this)">Commodities</button>
-                    <button class="cat-tab" onclick="filterCategory('INDIAN', this)">Indian Market</button>
-                    <button class="cat-tab" onclick="filterCategory('US', this)">US Market</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                    <div class="category-tabs" style="margin-bottom: 0; margin-top: 0;">
+                        <button class="cat-tab active" onclick="filterCategory('ALL', this)">All</button>
+                        <button class="cat-tab" onclick="filterCategory('FOREX', this)">Forex</button>
+                        <button class="cat-tab" onclick="filterCategory('COMMODITIES', this)">Commodities</button>
+                        <button class="cat-tab" onclick="filterCategory('INDIAN', this)">Indian Market</button>
+                        <button class="cat-tab" onclick="filterCategory('US', this)">US Market</button>
+                    </div>
+                    <button class="btn-analyze" style="padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem;" onclick="exportSignalsToCSV()">📥 Export CSV</button>
                 </div>
                 <div class="signals-grid" id="signals-container">
                     <!-- Dynamic Signals will load here -->
@@ -1065,6 +1071,93 @@
                             <li>PNG Visual Signal Card Delivery</li>
                         </ul>
                         <a href="https://t.me/ForexIndian_bot" target="_blank" class="btn-subscribe" style="display: block; text-decoration: none; margin-top: auto;">Subscribe & Connect Bot</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 8: Trading Toolkit & Telegram configuration -->
+            <div class="page-panel" id="page-tools">
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">🛠️ Premium White-Label Trading Toolkit</h2>
+                
+                <div class="deep-cases-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <!-- Position Size Calculator Card -->
+                    <div class="bull-card" style="display: flex; flex-direction: column; gap: 1rem; border-color: var(--gain-border);">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--gain); display: flex; align-items: center; gap: 0.5rem;">
+                            🧮 Position Size & Risk Calculator
+                        </h3>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">
+                            Calculate the optimal lot size based on your account size and risk threshold.
+                        </p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <label style="font-size: 0.85rem; color: var(--text-muted);">Account Balance:</label>
+                                <input type="number" id="calc-balance" class="filter-input" style="max-width: 140px;" value="10000" />
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <label style="font-size: 0.85rem; color: var(--text-muted);">Risk Percentage (%):</label>
+                                <input type="number" id="calc-risk" class="filter-input" style="max-width: 140px;" value="1" step="0.5" />
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <label style="font-size: 0.85rem; color: var(--text-muted);">Stop Loss (Pips/Points):</label>
+                                <input type="number" id="calc-sl" class="filter-input" style="max-width: 140px;" value="30" />
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
+                                <label style="font-size: 0.85rem; color: var(--text-muted);">Instrument Category:</label>
+                                <select id="calc-asset-type" class="filter-input" style="max-width: 140px;">
+                                    <option value="forex">Forex (1 Lot = 100k)</option>
+                                    <option value="gold">Gold (1 Lot = 100 oz)</option>
+                                    <option value="crypto">Crypto / Stocks (1 Lot = 1 unit)</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn-analyze" style="width: 100%; margin-top: 0.5rem;" onclick="calculatePositionSize()">Calculate Lot Size</button>
+                            
+                            <!-- Calculator Results -->
+                            <div id="calc-results" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(16,185,129,0.1); border: 1px solid var(--gain); border-radius: 10px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Amount At Risk:</span>
+                                    <span style="font-weight: 700; color: var(--gain);" id="calc-res-risk">$100.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Recommended Position Size:</span>
+                                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--gain);" id="calc-res-lots">0.33 Lots</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Telegram Setup Panel -->
+                    <div class="bear-card" style="display: flex; flex-direction: column; gap: 1rem; border-color: var(--loss-border);">
+                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--loss); display: flex; align-items: center; gap: 0.5rem;">
+                            📢 White-Label Telegram Bot Setup
+                        </h3>
+                        <p style="font-size: 0.82rem; color: var(--text-muted);">
+                            Integrate your own Telegram signals channel. Test connection dynamically.
+                        </p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Configured Bot Username:</span>
+                                <span style="font-weight: 600; color: var(--text-primary);">@ForexIndian_bot</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Integration Channel:</span>
+                                <span style="font-weight: 600; color: var(--text-primary);">@channel / Private Group</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Status:</span>
+                                <span style="padding: 0.2rem 0.5rem; background: rgba(16,185,129,0.1); color: var(--gain); border-radius: 20px; font-size: 0.72rem; font-weight: 700; border: 1px solid var(--gain);">Active</span>
+                            </div>
+                            
+                            <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 0.5rem 0;" />
+                            
+                            <button id="btn-test-telegram" class="btn-analyze" style="width: 100%; border-color: var(--loss-border); background: transparent; color: var(--text-primary);" onclick="triggerTelegramTest()">
+                                ⚡ Send Test Telegram Message
+                            </button>
+                            
+                            <div id="telegram-test-result" style="display: none; font-size: 0.82rem; padding: 0.8rem; border-radius: 8px; text-align: center;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1400,6 +1493,116 @@
                 return `${dayNames[dateObj.getDay()]} ${monNames[dateObj.getMonth()]} ${d}, ${timeStr}`;
             } catch(e) {
                 return `${dateStr} ${timeStr}`;
+            }
+        }
+
+        function exportCalendarToCSV() {
+            if (!allEvents || allEvents.length === 0) return;
+            let csv = "Time,Currency,Indicator,Impact,Forecast,Previous,Actual\n";
+            allEvents.forEach(ev => {
+                const row = [
+                    `"${ev.date} ${ev.time}"`,
+                    `"${ev.country}"`,
+                    `"${(ev.title || '').replace(/"/g, '""')}"`,
+                    `"${ev.impact}"`,
+                    `"${ev.forecast}"`,
+                    `"${ev.previous}"`,
+                    `"${ev.actual}"`
+                ];
+                csv += row.join(",") + "\n";
+            });
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `economic_calendar_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportSignalsToCSV() {
+            if (!allSignals || allSignals.length === 0) return;
+            let csv = "Date,Time,Asset,Direction,Entry,Stop Loss,Take Profit 1,Take Profit 2,Source\n";
+            allSignals.forEach(sig => {
+                const row = [
+                    `"${sig.date}"`,
+                    `"${sig.time}"`,
+                    `"${sig.pair}"`,
+                    `"${sig.direction}"`,
+                    `"${sig.entry}"`,
+                    `"${sig.sl}"`,
+                    `"${sig.tp1}"`,
+                    `"${sig.tp2}"`,
+                    `"${sig.source}"`
+                ];
+                csv += row.join(",") + "\n";
+            });
+            const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `trading_signals_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function calculatePositionSize() {
+            const balance = parseFloat(document.getElementById("calc-balance").value) || 0;
+            const riskPct = parseFloat(document.getElementById("calc-risk").value) || 0;
+            const sl = parseFloat(document.getElementById("calc-sl").value) || 0;
+            const assetType = document.getElementById("calc-asset-type").value;
+            
+            if (balance <= 0 || riskPct <= 0 || sl <= 0) return;
+            
+            const riskAmt = (balance * riskPct) / 100;
+            let lots = 0;
+            
+            if (assetType === "forex") {
+                lots = riskAmt / (sl * 10);
+            } else if (assetType === "gold") {
+                lots = riskAmt / (sl * 10);
+            } else {
+                lots = riskAmt / sl;
+            }
+            
+            document.getElementById("calc-res-risk").innerText = `$${riskAmt.toFixed(2)}`;
+            document.getElementById("calc-res-lots").innerText = `${lots.toFixed(2)} Lots / Units`;
+            document.getElementById("calc-results").style.display = "block";
+        }
+
+        async function triggerTelegramTest() {
+            const btn = document.getElementById("btn-test-telegram");
+            const resultDiv = document.getElementById("telegram-test-result");
+            
+            btn.disabled = true;
+            btn.innerText = "Sending test message...";
+            resultDiv.style.display = "none";
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/test-telegram`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    resultDiv.style.background = "rgba(16,185,129,0.15)";
+                    resultDiv.style.border = "1px solid var(--gain)";
+                    resultDiv.style.color = "var(--gain)";
+                    resultDiv.innerText = `Success! Test message sent successfully.`;
+                } else {
+                    resultDiv.style.background = "rgba(239,68,68,0.15)";
+                    resultDiv.style.border = "1px solid #ef4444";
+                    resultDiv.style.color = "#ef4444";
+                    resultDiv.innerText = `Error: ${data.error}`;
+                }
+                resultDiv.style.display = "block";
+            } catch(e) {
+                resultDiv.style.background = "rgba(239,68,68,0.15)";
+                resultDiv.style.border = "1px solid #ef4444";
+                resultDiv.style.color = "#ef4444";
+                resultDiv.innerText = `Failed to contact API. Make sure local server is running.`;
+                resultDiv.style.display = "block";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "⚡ Send Test Telegram Message";
             }
         }
 
