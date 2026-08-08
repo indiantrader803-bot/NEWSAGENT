@@ -890,8 +890,21 @@
             <!-- PAGE 3: Economic Calendar -->
             <div class="page-panel" id="page-calendar">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <h2 style="font-size: 1.5rem; font-weight: 700;">Economic Calendar (This Week)</h2>
-                    <div class="calendar-filters">
+                    <h2 id="calendar-title" style="font-size: 1.5rem; font-weight: 700;">Economic Calendar (This Week)</h2>
+                    <div class="calendar-filters" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <select class="filter-input" id="cal-range" onchange="onRangeChange()">
+                            <option value="this_week">This Week</option>
+                            <option value="next_week">Next Week</option>
+                            <option value="next_month">Next Month</option>
+                            <option value="full_year">Full Year</option>
+                            <option value="custom">Custom Range...</option>
+                        </select>
+                        <div id="custom-date-inputs" style="display: none; gap: 0.5rem; align-items: center;">
+                            <input type="date" class="filter-input" id="cal-from-date" style="max-width: 140px;" />
+                            <span style="color: var(--text-muted);">to</span>
+                            <input type="date" class="filter-input" id="cal-to-date" style="max-width: 140px;" />
+                            <button class="btn-analyze" style="padding: 0.5rem 1rem; border-radius: 8px;" onclick="loadCalendar()">Go</button>
+                        </div>
                         <input type="text" class="filter-input" id="cal-search" placeholder="Search Currency..." oninput="filterCalendar()" />
                         <select class="filter-input" id="cal-impact" onchange="filterCalendar()">
                             <option value="ALL">All Impacts</option>
@@ -1332,13 +1345,39 @@
         }
 
         // Load & Filter Economic Calendar Events (matching Forex Factory layout)
+        function onRangeChange() {
+            const range = document.getElementById("cal-range").value;
+            const customDiv = document.getElementById("custom-date-inputs");
+            if (range === "custom") {
+                customDiv.style.display = "flex";
+            } else {
+                customDiv.style.display = "none";
+                loadCalendar();
+            }
+        }
+
         async function loadCalendar() {
             const container = document.getElementById("calendar-container");
             try {
                 container.innerHTML = `<tr><td colspan="7" style="text-align:center; color: var(--text-muted); padding: 2rem;">⏳ Loading economic calendar...</td></tr>`;
-                const res = await fetch(`${API_BASE}/api/calendar`);
+                
+                const range = document.getElementById("cal-range").value;
+                const rangeLabel = range === "this_week" ? "This Week" :
+                                   range === "next_week" ? "Next Week" :
+                                   range === "next_month" ? "Next Month" :
+                                   range === "full_year" ? "Full Year" : "Custom Range";
+                document.getElementById("calendar-title").innerText = `Economic Calendar (${rangeLabel})`;
+
+                let url = `${API_BASE}/api/calendar?range=${range}`;
+                if (range === "custom") {
+                    const from = document.getElementById("cal-from-date").value;
+                    const to = document.getElementById("cal-to-date").value;
+                    if (from) url += `&from=${from}`;
+                    if (to) url += `&to=${to}`;
+                }
+                
+                const res = await fetch(url);
                 const data = await res.json();
-                // Handle API-level error
                 if (data && data.error) {
                     container.innerHTML = `<tr><td colspan="7" style="text-align:center; color: #ef4444; padding: 2rem;">⚠️ ${data.error}</td></tr>`;
                     return;
@@ -1653,6 +1692,15 @@
                 result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ Network error. Try again.</div>`;
             }
         }
+
+        // Initialize date inputs
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById("cal-from-date").value = today;
+            const nextWeek = new Date();
+            nextWeek.setDate(nextWeek.getDate() + 7);
+            document.getElementById("cal-to-date").value = nextWeek.toISOString().split('T')[0];
+        } catch(e) {}
 
         // Initial Data Fetch & Page Polls
         loadSignals();
