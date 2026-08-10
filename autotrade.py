@@ -12,6 +12,7 @@ import os
 from brokers import get_broker
 import json
 from datetime import datetime, timezone
+from notification import send_telegram_alert
 
 
 AUTOTRADE_ENABLED = os.getenv("AUTOTRADE_ENABLED", "").strip() in {"1", "true", "yes"}
@@ -184,8 +185,17 @@ class AutoTrader:
                 state = self._daily_loss_state()
                 today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
                 if state.get("date") != today:
-                    state = {"date": today, "loss": 0.0}
+                    state = {"date": today, "loss": 0.0, "alerted": False}
                 state["loss"] = float(state.get("loss", 0.0)) + abs(float(pnl))
+                # If we've exceeded the daily loss limit and haven't alerted yet, send Telegram alert
+                if float(state["loss"]) >= float(MAX_DAILY_LOSS) and not state.get("alerted"):
+                    msg = f"AUTOTRADE ALERT: Daily loss limit reached: {state['loss']} >= {MAX_DAILY_LOSS}. Autotrade will be disabled until reset."
+                    try:
+                        ok = send_telegram_alert(msg)
+                        if ok:
+                            state["alerted"] = True
+                    except Exception:
+                        pass
                 self._save_daily_loss_state(state)
         except Exception:
             pass
