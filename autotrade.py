@@ -26,6 +26,7 @@ TRADES_FILE = os.getenv("AUTOTRADE_TRADES_FILE", "autotrade_trades.json")
 LOSS_FILE = os.getenv("AUTOTRADE_LOSS_FILE", "autotrade_loss.json")
 MAX_DAILY_LOSS = float(os.getenv("AUTOTRADE_MAX_DAILY_LOSS", "0").strip() or 0)
 AUTOTRADE_NOTIFY_ON_ORDERS = os.getenv("AUTOTRADE_NOTIFY_ON_ORDERS", "1").strip() in {"1", "true", "yes"}
+STATE_FILE = os.getenv("AUTOTRADE_STATE_FILE", "autotrade_state.json")
 
 
 def parse_leverage(raw: str) -> float:
@@ -56,6 +57,13 @@ class AutoTrader:
             if not os.path.exists(LOSS_FILE):
                 with open(LOSS_FILE, "w", encoding="utf-8") as f:
                     json.dump({"date": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "loss": 0.0}, f)
+        except Exception:
+            pass
+        # ensure state file exists
+        try:
+            if not os.path.exists(STATE_FILE):
+                with open(STATE_FILE, "w", encoding="utf-8") as f:
+                    json.dump({"autotrade_enabled": AUTOTRADE_ENABLED}, f)
         except Exception:
             pass
 
@@ -216,6 +224,11 @@ class AutoTrader:
                             state["alerted"] = True
                     except Exception:
                         pass
+                    # disable autotrade now and persist state
+                    try:
+                        disable_autotrade(persist=True)
+                    except Exception:
+                        pass
                 self._save_daily_loss_state(state)
         except Exception:
             pass
@@ -234,3 +247,95 @@ def get_autotrader() -> AutoTrader:
 def place_trade(pair: str, direction: str, entry: float, tp1: float, tp2: float, sl: float, units: Optional[float] = None) -> dict:
     trader = get_autotrader()
     return trader.place_trade(pair, direction, entry, tp1, tp2, sl, units=units)
+
+
+# --- Order monitoring (polling) -------------------------------------------------
+_ORDER_MONITOR_STARTED = False
+
+def start_order_monitor(poll_interval: float = 5.0) -> None:
+    """Start a background monitor that polls open orders and sends lifecycle alerts.
+
+    This is a best-effort polling loop for adapters that don't provide webhooks.
+    It reads `AUTOTRADE_TRADES_FILE`, queries broker.get_order_status(), and
+    sends alerts on transitions (filled/canceled).
+    """
+    global _ORDER_MONITOR_STARTED
+    if _ORDER_MONITOR_STARTED:
+        return
+    _ORDER_MONITOR_STARTED = True
+
+    import threading, time
+
+    def monitor():
+        while True:
+            try:
+                if os.path.exists(TRADES_FILE):
+                    with open(TRADES_FILE, "r", encoding="utf-8") as f:
+                        trades = json.load(f)
+                else:
+                    trades = []
+                changed = False
+                for t in trades:
+                    for o in t.get("results", []) if isinstance(t.get("results"), list) else []:
+                        # skip if already finalized
+                        if o.get("status") in {"filled", "canceled", "closed"}:
+                            continue
+                        broker = get_autotrader().broker
+                        try:
+                            st = broker.get_order_status(o)
+                        except Exception:
+                            st = {"id": o.get("id"), "status": o.get("status")}
+                        if st and st.get("status") and st.get("status") != o.get("status"):
+                            # update and persist
+                            o_prev = o.get("status")
+                            o["status"] = st.get("status")
+                            o["filled_price"] = st.get("filled_price") or o.get("filled_price")
+                            o["filled_units"] = st.get("filled_units") or o.get("filled_units")
+                            changed = True
+                            # send notification
+                            try:
+                                send_telegram_alert(f"AUTOTRADE UPDATE: order {o.get('id')} {o_prev} -> {o.get('status')} for {t.get('pair')} id={o.get('id')}")
+                            except Exception:
+                                pass
+                if changed:
+                    try:
+                        with open(TRADES_FILE, "w", encoding="utf-8") as f:
+                            json.dump(trades, f, indent=2, ensure_ascii=False)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            time.sleep(poll_interval)
+
+    th = threading.Thread(target=monitor, daemon=True)
+    th.start()
+
+
+def disable_autotrade(persist: bool = True) -> None:
+    """Disable autotrade at runtime and persist the disabled state if requested."""
+    global AUTOTRADE_ENABLED
+    AUTOTRADE_ENABLED = False
+    if persist:
+        try:
+            state = {"autotrade_enabled": False}
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+
+def load_autotrade_state() -> None:
+    """Load persisted autotrade state from `STATE_FILE` and apply it."""
+    global AUTOTRADE_ENABLED
+    try:
+        if os.path.exists(STATE_FILE):
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                st = json.load(f)
+                if isinstance(st, dict) and "autotrade_enabled" in st:
+                    AUTOTRADE_ENABLED = bool(st.get("autotrade_enabled"))
+    except Exception:
+        pass
+
+
+# load persisted state at import time
+load_autotrade_state()
