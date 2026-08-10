@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  market-bot-24x7:
+    build: .
+    container_name: forex-signals-24x7
+    restart: unless-stopped
+    
+    environment:
+      # Telegram Configuration
+      - BOT_TOKEN=${BOT_TOKEN}
+      - BOT_TOKEN2=${BOT_TOKEN2}
+      - BOT_TOKEN3=${BOT_TOKEN3}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - TELEGRAM_CHAT_ID3=${TELEGRAM_CHAT_ID3}
+      
+      # API Keys
+      - NEWS_API_KEY=${NEWS_API_KEY}
+      - NEWSDATA_API_KEY=${NEWSDATA_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+      - MASSIVE_API_KEY=${MASSIVE_API_KEY}
+      
+      # Configuration
+      - NEWS_PROVIDER=auto
+      - LIVE_NEWS_ENABLED=true
+      - FETCH_INTERVAL_SECONDS=900
+      - HIGH_IMPACT_CHECK_INTERVAL=60
+      
+      # 24/7 Worker Settings
+      - CHECK_INTERVAL_FAST=30
+      - CHECK_INTERVAL_SLOW=120
+      - NEWS_CHECK_INTERVAL=180
+      - CRYPTO_CHECK_INTERVAL=300
+      - INDIAN_MARKET_INTERVAL=60
+      - US_MARKET_INTERVAL=60
+      - FOREX_SIGNAL_INTERVAL=600
+    
+    volumes:
+      # Persist state files across container restarts
+      - ./data:/app/data
+      - ./sent_articles.json:/app/sent_articles.json
+      - ./signal_log.json:/app/signal_log.json
+      - ./sent_messages.json:/app/sent_messages.json
+      - ./worker_24x7_state.json:/app/worker_24x7_state.json
+      - ./crypto_screener_seen.json:/app/crypto_screener_seen.json
+      - ./.ai_cycle_counter:/app/.ai_cycle_counter
+    
+    # Resource limits (adjust based on your server)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network mode
+    network_mode: bridge
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('worker_24x7_state.json') else 1)"]
+      interval: 5m
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  data:

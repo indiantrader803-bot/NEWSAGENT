@@ -1,9 +1,12 @@
 services:
-  - type: web
-    name: live-forex-signals-ai
+  # 24/7 Continuous Market Monitoring Bot (Upgraded)
+  - type: worker
+    name: market-bot-24x7
     env: python
+    plan: starter  # Use 'free' tier or 'starter' for production
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python unified_24x7_worker.py
+    autoDeploy: true
     envVars:
       - key: BOT_TOKEN
         sync: false
