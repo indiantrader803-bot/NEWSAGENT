@@ -25,6 +25,7 @@ _LEVERAGE_RAW = os.getenv("LEVERAGE", "1:1").strip()
 TRADES_FILE = os.getenv("AUTOTRADE_TRADES_FILE", "autotrade_trades.json")
 LOSS_FILE = os.getenv("AUTOTRADE_LOSS_FILE", "autotrade_loss.json")
 MAX_DAILY_LOSS = float(os.getenv("AUTOTRADE_MAX_DAILY_LOSS", "0").strip() or 0)
+AUTOTRADE_NOTIFY_ON_ORDERS = os.getenv("AUTOTRADE_NOTIFY_ON_ORDERS", "1").strip() in {"1", "true", "yes"}
 
 
 def parse_leverage(raw: str) -> float:
@@ -107,8 +108,27 @@ class AutoTrader:
                 "results": results,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             })
+            # Send Telegram alerts for placed orders if enabled
+            try:
+                if AUTOTRADE_NOTIFY_ON_ORDERS:
+                    for o in results:
+                        provider = o.get("provider", BROKER_PROVIDER)
+                        status = o.get("status")
+                        msg = f"AUTOTRADE: {provider.upper()} order {status}\n{side.upper()} {pair} units={o.get('units')} entry={o.get('entry')} tp={o.get('tp')} sl={o.get('sl')} id={o.get('id')}"
+                        try:
+                            send_telegram_alert(msg)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             return {"status": "ok", "orders": results}
         except Exception as exc:
+            # send alert on failure
+            try:
+                if AUTOTRADE_NOTIFY_ON_ORDERS:
+                    send_telegram_alert(f"AUTOTRADE ERROR placing order: {str(exc)}")
+            except Exception:
+                pass
             return {"status": "error", "error": str(exc)}
 
     def _record_trade(self, data: dict) -> None:
