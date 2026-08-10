@@ -27,6 +27,7 @@ class DummyBroker(BrokerBase):
             "units": units,
             "entry": entry,
             "tp": tp,
+            "tp2": kwargs.get("tp2"),
             "sl": sl,
             "timestamp": timestamp,
             "leverage": kwargs.get("leverage"),

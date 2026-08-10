@@ -3578,16 +3578,38 @@ async def broadcast(bot: Bot, text: str, parse_mode: str = "Markdown", disable_w
         
         def clean_text_for_compare(t: str) -> str:
             import re
-            t = re.sub(r'[^a-zA-Z0-9]', '', t.lower())
-            # strip dynamic parts like date/time
-            t = re.sub(r'updated\d{4}.*|time\d{4}.*', '', t)
+            # Normalize: lowercase, remove punctuation, collapse whitespace
+            t = t.lower()
+            t = re.sub(r'\s+', ' ', t)
+            # remove URLs
+            t = re.sub(r'https?://\S+', '', t)
+            # remove numbers and timestamps/dates which often change between messages
+            t = re.sub(r'\d{1,4}[\-/:]\d{1,4}[\-/:\d]*', '', t)
+            t = re.sub(r'\d+', '', t)
+            # keep only letters and spaces
+            t = re.sub(r'[^a-z\s]', '', t)
+            t = t.strip()
             return t
             
         cleaned_current = clean_text_for_compare(text)
         if cleaned_current:
+            # fuzzy compare against recent sent messages to avoid near-duplicates
+            from difflib import SequenceMatcher
+            try:
+                sim_thresh = float(os.getenv("DUPLICATE_SIMILARITY", "0.85"))
+            except Exception:
+                sim_thresh = 0.85
             for sent_msg in sent_cache:
-                if clean_text_for_compare(sent_msg) == cleaned_current:
-                    print("[BROADCAST] Suppressed duplicate Telegram message.")
+                s = clean_text_for_compare(sent_msg)
+                if not s:
+                    continue
+                if s == cleaned_current:
+                    print("[BROADCAST] Suppressed duplicate Telegram message (exact match).")
+                    return 0
+                # compute similarity
+                ratio = SequenceMatcher(None, s, cleaned_current).ratio()
+                if ratio >= sim_thresh:
+                    print(f"[BROADCAST] Suppressed duplicate Telegram message (fuzzy match {ratio:.2f}).")
                     return 0
                     
             sent_cache.append(text)

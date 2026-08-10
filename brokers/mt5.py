@@ -41,6 +41,8 @@ class MT5Broker(BrokerBase):
                     "price": entry,
                     "sl": sl,
                     "tp": tp,
+                    # include secondary TP if provided in kwargs (MT5 may need OCO or multiple orders)
+                    "tp2": kwargs.get("tp2"),
                     "deviation": 20,
                     "magic": 234000,
                     "comment": "autotrade",
@@ -60,6 +62,7 @@ class MT5Broker(BrokerBase):
             "units": units,
             "entry": entry,
             "tp": tp,
+            "tp2": kwargs.get("tp2"),
             "sl": sl,
             "timestamp": timestamp,
             "leverage": kwargs.get("leverage"),

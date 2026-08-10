@@ -1,0 +1,40 @@
+[
+  {
+    "pair": "EUR/USD",
+    "side": "buy",
+    "entry": 1.0,
+    "tp1": 1.1,
+    "tp2": 1.2,
+    "sl": 0.99,
+    "units": 1000.0,
+    "results": [
+      {
+        "id": "5bfdbe8a-000c-485f-840e-9ff405ca438b",
+        "status": "simulated",
+        "pair": "EUR/USD",
+        "side": "buy",
+        "units": 500.0,
+        "entry": 1.0,
+        "tp": 1.1,
+        "tp2": null,
+        "sl": 0.99,
+        "timestamp": 1786369757,
+        "leverage": 1.0
+      },
+      {
+        "id": "75164abe-8d1d-4c6a-8413-0b3522b0a82a",
+        "status": "simulated",
+        "pair": "EUR/USD",
+        "side": "buy",
+        "units": 500.0,
+        "entry": 1.0,
+        "tp": 1.2,
+        "tp2": 1.2,
+        "sl": 0.99,
+        "timestamp": 1786369757,
+        "leverage": 1.0
+      }
+    ],
+    "timestamp": "2026-08-10T13:49:17.254562+00:00"
+  }
+]
