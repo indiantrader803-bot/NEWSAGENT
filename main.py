@@ -20,6 +20,7 @@ import massive_data
 import realtime_alert
 import ai_agent
 import crypto_screener
+import autotrade
 
 load_dotenv()
 
@@ -1098,6 +1099,13 @@ def log_signal(pair: str, direction: str, entry: float, tp1: float, tp2: float, 
     }
     _signal_log.append(record)
     save_signal_log(_signal_log)
+    # Attempt automated trading if enabled (safe default: disabled or dummy/paper broker)
+    try:
+        if os.getenv("AUTOTRADE_ENABLED", "").strip().lower() in {"1", "true", "yes"}:
+            res = autotrade.place_trade(pair, direction, entry, tp1, tp2, sl)
+            print(f"[AUTOTRADE] {res}")
+    except Exception as exc:
+        print(f"[AUTOTRADE] Error while placing trade: {exc}")
 
 
 def get_active_provider() -> str:
