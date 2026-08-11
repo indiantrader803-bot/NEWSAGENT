@@ -854,6 +854,7 @@
             <select class="filter-input" id="dashboard-lang" onchange="onLanguageChange()" style="max-width: 125px; margin-bottom: 0; padding: 0.4rem 0.6rem; font-size: 0.82rem; border-radius: 8px; margin-right: 0.5rem; border-color: var(--card-border); margin-left: 0.5rem;">
                 <option value="en">🇺🇸 English</option>
                 <option value="hi">🇮🇳 Hindi</option>
+                <option value="bn">🇧🇩 Bengali</option>
                 <option value="es">🇪🇸 Spanish</option>
                 <option value="ar">🇦🇪 Arabic</option>
                 <option value="de">🇩🇪 German</option>
@@ -1711,14 +1712,15 @@
                     card.className = "news-card";
                     card.innerHTML = `
                         <div class="news-top">
-                            <span>📰 ${a.source}</span>
+                            <span>📰 ${a.link ? `<a href="${a.link}" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${a.source} ↗</a>` : a.source}</span>
                             <span>${a.publishedAt}</span>
                         </div>
                         <div class="news-title">${a.title}</div>
                         <div class="news-desc">${a.description || ''}</div>
-                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem; flex-wrap: wrap;">
                             <span class="sentiment-badge sentiment-${a.direction}">${a.direction}</span>
                             <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Confidence: ${a.confidence}</span>
+                            <span style="background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-left: auto;">🎯 ${a.asset || 'MARKET'}</span>
                         </div>
                     `;
                     container.appendChild(card);

@@ -4575,12 +4575,15 @@ async def handle_health_check(reader, writer):
                     "source": a.get("source_name") or a.get("source", "Market Feed"),
                     "direction": direction,
                     "confidence": confidence,
-                    "publishedAt": a.get("publishedAt") or a.get("time") or ""
+                    "publishedAt": a.get("publishedAt") or a.get("time") or "",
+                    "link": a.get("link") or a.get("url") or "",
+                    "asset": identify_asset(a)
                 })
 
             if lang not in {"en", "english"}:
                 lang_names = {
                     "hi": "Hindi", "hindi": "Hindi",
+                    "bn": "Bengali", "bengali": "Bengali",
                     "es": "Spanish", "spanish": "Spanish",
                     "ar": "Arabic", "arabic": "Arabic",
                     "de": "German", "german": "German",
