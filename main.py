@@ -1772,37 +1772,14 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
-    payload = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": messages,
-    }
-    if json_mode:
-        payload["response_format"] = {"type": "json_object"}
-
-    # Try Llama 3.3 70B first
-    try:
-        resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=15,
-        )
-        if resp.status_code == 429:
-            raise Exception("Rate limit hit, falling back")
-        resp.raise_for_status()
-        text = resp.json()["choices"][0]["message"]["content"].strip()
-        return text if json_mode else escape(text)
-    except Exception:
-        # Fallback to high-rate-limit 8B model
-        fallback_payload = {
-            "model": "llama-3.1-8b-instant",
+    models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    for m in models_to_try:
+        payload = {
+            "model": m,
             "messages": messages,
         }
         if json_mode:
-            fallback_payload["response_format"] = {"type": "json_object"}
+            payload["response_format"] = {"type": "json_object"}
         try:
             resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -1810,14 +1787,15 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
                     "Authorization": f"Bearer {ANALYZER_GROQ_API_KEY}",
                     "Content-Type": "application/json",
                 },
-                json=fallback_payload,
-                timeout=15,
+                json=payload,
+                timeout=20,
             )
-            resp.raise_for_status()
-            text = resp.json()["choices"][0]["message"]["content"].strip()
-            return text if json_mode else escape(text)
+            if resp.status_code == 200:
+                text = resp.json()["choices"][0]["message"]["content"].strip()
+                return text if json_mode else escape(text)
         except Exception:
-            return None
+            continue
+    return None
 
 
 def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
@@ -4339,6 +4317,25 @@ async def ai_agent_improvement_job(context: ContextTypes.DEFAULT_TYPE) -> None:
         print(f"[AI AGENT] Job failed: {exc}")
 
 
+def normalize_ticker_symbol(symbol: str) -> str:
+    symbol = symbol.strip().upper().replace("/", "")
+    forex_pairs = {
+        "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+        "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "GBPCAD", "EURCAD", "EURCHF",
+        "GBPCHF", "CHFJPY", "CADJPY", "NZDJPY", "AUDCAD", "AUDNZD", "AUDCHF",
+        "USDSGD", "USDHKD", "USDMXN", "USDTRY", "USDZAR", "USDCNH", "USDSEK",
+        "USDNOK", "USDDKK", "USDINR"
+    }
+    if symbol in forex_pairs:
+        return f"{symbol}=X"
+    if symbol.endswith("=X"):
+        return symbol
+    crypto_symbols = {"BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LINK", "LTC", "BNB"}
+    if symbol in crypto_symbols:
+        return f"{symbol}-USD"
+    return symbol
+
+
 async def handle_health_check(reader, writer):
     try:
         request = await reader.read(1024)
@@ -4459,7 +4456,8 @@ async def handle_health_check(reader, writer):
 
     elif path_only == "/api/news":
         try:
-            articles = fetch_latest_articles()[:20]
+            lang = query_params.get("lang", ["en"])[0].strip().lower()
+            articles = fetch_latest_articles()[:15]
             serializable_articles = []
             for a in articles:
                 text_body = normalize_text(a)
@@ -4468,13 +4466,58 @@ async def handle_health_check(reader, writer):
                 if bias:
                     direction, confidence = compute_confidence(text_body)
                 serializable_articles.append({
-                    "title": a.get("title"),
-                    "description": a.get("description"),
+                    "title": a.get("title") or "Market Update",
+                    "description": a.get("description") or "No description available.",
                     "source": a.get("source_name") or a.get("source", "Market Feed"),
                     "direction": direction,
                     "confidence": confidence,
                     "publishedAt": a.get("publishedAt") or a.get("time") or ""
                 })
+
+            if lang not in {"en", "english"}:
+                lang_names = {
+                    "hi": "Hindi",
+                    "hindi": "Hindi",
+                    "es": "Spanish",
+                    "spanish": "Spanish",
+                    "ar": "Arabic",
+                    "arabic": "Arabic",
+                    "de": "German",
+                    "german": "German",
+                    "fr": "French",
+                    "french": "French"
+                }
+                target_lang = lang_names.get(lang, "English")
+                if target_lang != "English":
+                    trans_list = []
+                    for idx, art in enumerate(serializable_articles):
+                        trans_list.append({
+                            "id": idx,
+                            "title": art["title"],
+                            "description": art["description"]
+                        })
+                    prompt = (
+                        f"You are a professional financial translator. Translate the following list of news articles into {target_lang}. "
+                        f"Maintain exact financial terms, abbreviations, and asset names. "
+                        f"Return the translated data strictly as a JSON array of objects with keys 'id', 'title', and 'description'. "
+                        f"Do not write any conversational text or formatting outside the JSON array:\n\n"
+                        f"{json.dumps(trans_list)}"
+                    )
+                    raw_res = _analyzer_groq_chat(prompt, json_mode=True)
+                    if raw_res:
+                        try:
+                            import re
+                            json_match = re.search(r'\[.*\]', raw_res, re.DOTALL)
+                            if json_match:
+                                translated_data = json.loads(json_match.group())
+                                for item in translated_data:
+                                    idx = item.get("id")
+                                    if idx is not None and 0 <= idx < len(serializable_articles):
+                                        serializable_articles[idx]["title"] = item.get("title", serializable_articles[idx]["title"])
+                                        serializable_articles[idx]["description"] = item.get("description", serializable_articles[idx]["description"])
+                        except Exception as parse_e:
+                            print(f"[TRANSLATION PARSE ERROR]: {parse_e}")
+
             response_body = json.dumps(serializable_articles)
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
@@ -4482,6 +4525,7 @@ async def handle_health_check(reader, writer):
 
     elif path_only == "/api/analyze":
         symbol = query_params.get("symbol", [""])[0].strip().upper()
+        symbol = normalize_ticker_symbol(symbol)
         if not symbol:
             response_body = json.dumps({"error": "Symbol parameter is required"})
         else:
@@ -4544,6 +4588,7 @@ async def handle_health_check(reader, writer):
 
     elif path_only == "/api/deep-analyze":
         symbol = query_params.get("symbol", [""])[0].strip()
+        symbol = normalize_ticker_symbol(symbol)
         if not symbol:
             response_body = json.dumps({"error": "symbol parameter required. e.g. /api/deep-analyze?symbol=RELIANCE.NS"})
         else:

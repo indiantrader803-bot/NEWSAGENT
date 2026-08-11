@@ -1177,6 +1177,12 @@
         let allSignals = [];
         let allEvents = [];
         let intelLoaded = false;
+        let currentLanguage = 'en';
+
+        function onLanguageChange() {
+            currentLanguage = document.getElementById("dashboard-lang").value;
+            loadNews();
+        }
 
         // Deep Analysis step styles
         const styleEl = document.createElement('style');
@@ -1688,10 +1694,11 @@
         // Load Sentiment News
         async function loadNews() {
             try {
-                const res = await fetch(`${API_BASE}/api/news`);
-                const data = await res.json();
-                
                 const container = document.getElementById("news-container");
+                container.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 2rem;">⏳ Loading & translating news feed...</div>`;
+                
+                const res = await fetch(`${API_BASE}/api/news?lang=${currentLanguage}`);
+                const data = await res.json();
                 container.innerHTML = "";
                 
                 if (data.length === 0) {

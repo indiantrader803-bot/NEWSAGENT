@@ -37,37 +37,31 @@ def _call_groq(prompt: str, system: str, model: str = "llama-3.3-70b-versatile")
     if not key:
         return "Error: No Groq API key configured."
     import requests
-    try:
-        resp = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt},
-                ],
-            },
-            timeout=30,
-        )
-        if resp.status_code == 429:
-            # Fallback to 8B model
+    
+    models_to_try = [model, "llama-3.1-8b-instant"]
+    last_err = ""
+    for m in models_to_try:
+        try:
             resp = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
                 json={
-                    "model": "llama-3.1-8b-instant",
+                    "model": m,
                     "messages": [
                         {"role": "system", "content": system},
                         {"role": "user", "content": prompt},
                     ],
                 },
-                timeout=30,
+                timeout=25,
             )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        return f"Error: {str(e)}"
+            if resp.status_code == 200:
+                return resp.json()["choices"][0]["message"]["content"].strip()
+            else:
+                last_err = f"Status {resp.status_code}: {resp.text}"
+        except Exception as e:
+            last_err = str(e)
+            
+    return f"Error: {last_err}"
 
 
 # ── RSI helper ────────────────────────────────────────────────────────────────
