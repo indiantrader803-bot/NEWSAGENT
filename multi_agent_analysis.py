@@ -12,6 +12,123 @@ import operator
 
 import yfinance as yf
 
+def normalize_ticker_symbol(symbol: str) -> str:
+    symbol = symbol.strip().upper().replace("/", "")
+    if not symbol:
+        return symbol
+
+    # Spot metals / Commodities
+    commodity_and_index_map = {
+        "GOLD": "GC=F",
+        "XAUUSD": "GC=F",
+        "SILVER": "SI=F",
+        "XAGUSD": "SI=F",
+        "OIL": "CL=F",
+        "USOIL": "CL=F",
+        "WTI": "CL=F",
+        "BRENT": "BZ=F",
+        "UKOIL": "BZ=F",
+        "SPX": "^GSPC",
+        "SP500": "^GSPC",
+        "S&P500": "^GSPC",
+        "COMP": "^IXIC",
+        "NASDAQ": "^IXIC",
+        "DJI": "^DJI",
+        "DOW": "^DJI",
+    }
+    if symbol in commodity_and_index_map:
+        return commodity_and_index_map[symbol]
+
+    # Common Nifty stocks & Indices mapping
+    indian_map = {
+        "NIFTY": "^NSEI",
+        "NIFTY50": "^NSEI",
+        "BANKNIFTY": "^NSEBANK",
+        "SENSEX": "^BSESN",
+        "RELIANCE": "RELIANCE.NS",
+        "TCS": "TCS.NS",
+        "HDFCBANK": "HDFCBANK.NS",
+        "INFY": "INFY.NS",
+        "ICICIBANK": "ICICIBANK.NS",
+        "BHARTIARTL": "BHARTIARTL.NS",
+        "SBIN": "SBIN.NS",
+        "LICI": "LICI.NS",
+        "ITC": "ITC.NS",
+        "HINDUNILVR": "HINDUNILVR.NS",
+        "LT": "LT.NS",
+        "BAJFINANCE": "BAJFINANCE.NS",
+        "HCLTECH": "HCLTECH.NS",
+        "MARUTI": "MARUTI.NS",
+        "SUNPHARMA": "SUNPHARMA.NS",
+        "ADANIENT": "ADANIENT.NS",
+        "TATAMOTORS": "TATAMOTORS.NS",
+        "AXISBANK": "AXISBANK.NS",
+        "ONGC": "ONGC.NS",
+        "NTPC": "NTPC.NS",
+        "JSWSTEEL": "JSWSTEEL.NS",
+        "KOTAKBANK": "KOTAKBANK.NS",
+        "COALINDIA": "COALINDIA.NS",
+        "TITAN": "TITAN.NS",
+        "ULTRACEMCO": "ULTRACEMCO.NS",
+        "SBILIFE": "SBILIFE.NS",
+        "ADANIPORTS": "ADANIPORTS.NS",
+        "ASIANPAINT": "ASIANPAINT.NS",
+        "HINDALCO": "HINDALCO.NS",
+        "POWERGRID": "POWERGRID.NS",
+        "GRASIM": "GRASIM.NS",
+        "HDFCLIFE": "HDFCLIFE.NS",
+        "BPCL": "BPCL.NS",
+        "INDUSINDBK": "INDUSINDBK.NS",
+        "BRITANNIA": "BRITANNIA.NS",
+        "DRREDDY": "DRREDDY.NS",
+        "JIOFIN": "JIOFIN.NS",
+        "TATASTEEL": "TATASTEEL.NS",
+        "WIPRO": "WIPRO.NS",
+        "HEROMOTOCO": "HEROMOTOCO.NS",
+        "APOLLOHOSP": "APOLLOHOSP.NS",
+        "EICHERMOT": "EICHERMOT.NS",
+        "LTIM": "LTIM.NS",
+        "DIVISLAB": "DIVISLAB.NS",
+        "SHRIRAMFIN": "SHRIRAMFIN.NS",
+        "NESTLEIND": "NESTLEIND.NS",
+        "CIPLA": "CIPLA.NS",
+        "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+        "GRANULES": "GRANULES.NS",
+        "AUROPHARMA": "AUROPHARMA.NS",
+        "TVSMOTOR": "TVSMOTOR.NS",
+    }
+    if symbol in indian_map:
+        return indian_map[symbol]
+
+    forex_pairs = {
+        "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+        "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "GBPCAD", "EURCAD", "EURCHF",
+        "GBPCHF", "CHFJPY", "CADJPY", "NZDJPY", "AUDCAD", "AUDNZD", "AUDCHF",
+        "USDSGD", "USDHKD", "USDMXN", "USDTRY", "USDZAR", "USDCNH", "USDSEK",
+        "USDNOK", "USDDKK", "USDINR"
+    }
+    if symbol in forex_pairs:
+        return f"{symbol}=X"
+
+    if symbol.endswith("=X") or symbol.endswith("-USD") or symbol.endswith(".NS") or symbol.startswith("^"):
+        return symbol
+
+    # Crypto lookup
+    cryptos = {
+        "BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LINK", "LTC", "BNB",
+        "AVAX", "UNI", "MATIC", "SHIB", "TRX", "TON", "NEAR", "BCH", "XLM"
+    }
+    if symbol in cryptos:
+        return f"{symbol}-USD"
+
+    # Crypto suffix formats e.g. BTCUSD -> BTC-USD
+    if symbol.endswith("USD") and len(symbol) > 3:
+        prefix = symbol[:-3]
+        if prefix in cryptos:
+            return f"{prefix}-USD"
+
+    return symbol
+
 # ── Agent State ───────────────────────────────────────────────────────────────
 class AgentState(TypedDict):
     ticker: str
@@ -241,6 +358,7 @@ def run_deep_analysis(ticker: str) -> dict[str, Any]:
     Run the full 5-agent deep analysis pipeline.
     Returns a dict with all agent outputs or an error.
     """
+    ticker = normalize_ticker_symbol(ticker)
     app = build_graph()
     if app is None:
         return {"error": "langgraph not installed. Run: pip install langgraph"}

@@ -4319,6 +4319,92 @@ async def ai_agent_improvement_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def normalize_ticker_symbol(symbol: str) -> str:
     symbol = symbol.strip().upper().replace("/", "")
+    if not symbol:
+        return symbol
+
+    # Spot metals / Commodities
+    commodity_and_index_map = {
+        "GOLD": "GC=F",
+        "XAUUSD": "GC=F",
+        "SILVER": "SI=F",
+        "XAGUSD": "SI=F",
+        "OIL": "CL=F",
+        "USOIL": "CL=F",
+        "WTI": "CL=F",
+        "BRENT": "BZ=F",
+        "UKOIL": "BZ=F",
+        "SPX": "^GSPC",
+        "SP500": "^GSPC",
+        "S&P500": "^GSPC",
+        "COMP": "^IXIC",
+        "NASDAQ": "^IXIC",
+        "DJI": "^DJI",
+        "DOW": "^DJI",
+    }
+    if symbol in commodity_and_index_map:
+        return commodity_and_index_map[symbol]
+
+    # Common Nifty stocks & Indices mapping
+    indian_map = {
+        "NIFTY": "^NSEI",
+        "NIFTY50": "^NSEI",
+        "BANKNIFTY": "^NSEBANK",
+        "SENSEX": "^BSESN",
+        "RELIANCE": "RELIANCE.NS",
+        "TCS": "TCS.NS",
+        "HDFCBANK": "HDFCBANK.NS",
+        "INFY": "INFY.NS",
+        "ICICIBANK": "ICICIBANK.NS",
+        "BHARTIARTL": "BHARTIARTL.NS",
+        "SBIN": "SBIN.NS",
+        "LICI": "LICI.NS",
+        "ITC": "ITC.NS",
+        "HINDUNILVR": "HINDUNILVR.NS",
+        "LT": "LT.NS",
+        "BAJFINANCE": "BAJFINANCE.NS",
+        "HCLTECH": "HCLTECH.NS",
+        "MARUTI": "MARUTI.NS",
+        "SUNPHARMA": "SUNPHARMA.NS",
+        "ADANIENT": "ADANIENT.NS",
+        "TATAMOTORS": "TATAMOTORS.NS",
+        "AXISBANK": "AXISBANK.NS",
+        "ONGC": "ONGC.NS",
+        "NTPC": "NTPC.NS",
+        "JSWSTEEL": "JSWSTEEL.NS",
+        "KOTAKBANK": "KOTAKBANK.NS",
+        "COALINDIA": "COALINDIA.NS",
+        "TITAN": "TITAN.NS",
+        "ULTRACEMCO": "ULTRACEMCO.NS",
+        "SBILIFE": "SBILIFE.NS",
+        "ADANIPORTS": "ADANIPORTS.NS",
+        "ASIANPAINT": "ASIANPAINT.NS",
+        "HINDALCO": "HINDALCO.NS",
+        "POWERGRID": "POWERGRID.NS",
+        "GRASIM": "GRASIM.NS",
+        "HDFCLIFE": "HDFCLIFE.NS",
+        "BPCL": "BPCL.NS",
+        "INDUSINDBK": "INDUSINDBK.NS",
+        "BRITANNIA": "BRITANNIA.NS",
+        "DRREDDY": "DRREDDY.NS",
+        "JIOFIN": "JIOFIN.NS",
+        "TATASTEEL": "TATASTEEL.NS",
+        "WIPRO": "WIPRO.NS",
+        "HEROMOTOCO": "HEROMOTOCO.NS",
+        "APOLLOHOSP": "APOLLOHOSP.NS",
+        "EICHERMOT": "EICHERMOT.NS",
+        "LTIM": "LTIM.NS",
+        "DIVISLAB": "DIVISLAB.NS",
+        "SHRIRAMFIN": "SHRIRAMFIN.NS",
+        "NESTLEIND": "NESTLEIND.NS",
+        "CIPLA": "CIPLA.NS",
+        "BAJAJ-AUTO": "BAJAJ-AUTO.NS",
+        "GRANULES": "GRANULES.NS",
+        "AUROPHARMA": "AUROPHARMA.NS",
+        "TVSMOTOR": "TVSMOTOR.NS",
+    }
+    if symbol in indian_map:
+        return indian_map[symbol]
+
     forex_pairs = {
         "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
         "EURGBP", "EURJPY", "GBPJPY", "AUDJPY", "GBPCAD", "EURCAD", "EURCHF",
@@ -4328,11 +4414,24 @@ def normalize_ticker_symbol(symbol: str) -> str:
     }
     if symbol in forex_pairs:
         return f"{symbol}=X"
-    if symbol.endswith("=X"):
+
+    if symbol.endswith("=X") or symbol.endswith("-USD") or symbol.endswith(".NS") or symbol.startswith("^"):
         return symbol
-    crypto_symbols = {"BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LINK", "LTC", "BNB"}
-    if symbol in crypto_symbols:
+
+    # Crypto lookup
+    cryptos = {
+        "BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LINK", "LTC", "BNB",
+        "AVAX", "UNI", "MATIC", "SHIB", "TRX", "TON", "NEAR", "BCH", "XLM"
+    }
+    if symbol in cryptos:
         return f"{symbol}-USD"
+
+    # Crypto suffix formats e.g. BTCUSD -> BTC-USD
+    if symbol.endswith("USD") and len(symbol) > 3:
+        prefix = symbol[:-3]
+        if prefix in cryptos:
+            return f"{prefix}-USD"
+
     return symbol
 
 
@@ -4465,9 +4564,14 @@ async def handle_health_check(reader, writer):
                 bias = infer_bias_signal(a)
                 if bias:
                     direction, confidence = compute_confidence(text_body)
+                
+                desc = a.get("description") or "No description available."
+                if len(desc) > 250:
+                    desc = desc[:247] + "..."
+                
                 serializable_articles.append({
                     "title": a.get("title") or "Market Update",
-                    "description": a.get("description") or "No description available.",
+                    "description": desc,
                     "source": a.get("source_name") or a.get("source", "Market Feed"),
                     "direction": direction,
                     "confidence": confidence,
@@ -4476,18 +4580,28 @@ async def handle_health_check(reader, writer):
 
             if lang not in {"en", "english"}:
                 lang_names = {
-                    "hi": "Hindi",
-                    "hindi": "Hindi",
-                    "es": "Spanish",
-                    "spanish": "Spanish",
-                    "ar": "Arabic",
-                    "arabic": "Arabic",
-                    "de": "German",
-                    "german": "German",
-                    "fr": "French",
-                    "french": "French"
+                    "hi": "Hindi", "hindi": "Hindi",
+                    "es": "Spanish", "spanish": "Spanish",
+                    "ar": "Arabic", "arabic": "Arabic",
+                    "de": "German", "german": "German",
+                    "fr": "French", "french": "French",
+                    "it": "Italian", "italian": "Italian",
+                    "ja": "Japanese", "japanese": "Japanese",
+                    "zh": "Chinese", "chinese": "Chinese",
+                    "ru": "Russian", "russian": "Russian",
+                    "pt": "Portuguese", "portuguese": "Portuguese",
+                    "nl": "Dutch", "dutch": "Dutch",
+                    "tr": "Turkish", "turkish": "Turkish",
+                    "ko": "Korean", "korean": "Korean",
+                    "pl": "Polish", "polish": "Polish",
+                    "vi": "Vietnamese", "vietnamese": "Vietnamese",
+                    "sv": "Swedish", "swedish": "Swedish",
+                    "da": "Danish", "danish": "Danish",
+                    "fi": "Finnish", "finnish": "Finnish",
+                    "no": "Norwegian", "norwegian": "Norwegian",
+                    "id": "Indonesian", "indonesian": "Indonesian"
                 }
-                target_lang = lang_names.get(lang, "English")
+                target_lang = lang_names.get(lang, lang.capitalize())
                 if target_lang != "English":
                     trans_list = []
                     for idx, art in enumerate(serializable_articles):
@@ -4499,17 +4613,22 @@ async def handle_health_check(reader, writer):
                     prompt = (
                         f"You are a professional financial translator. Translate the following list of news articles into {target_lang}. "
                         f"Maintain exact financial terms, abbreviations, and asset names. "
-                        f"Return the translated data strictly as a JSON array of objects with keys 'id', 'title', and 'description'. "
-                        f"Do not write any conversational text or formatting outside the JSON array:\n\n"
+                        f"Return the translated data strictly as a JSON object containing a 'translated_data' key, "
+                        f"which is an array of objects with keys 'id', 'title', and 'description':\n\n"
                         f"{json.dumps(trans_list)}"
                     )
                     raw_res = _analyzer_groq_chat(prompt, json_mode=True)
                     if raw_res:
                         try:
-                            import re
-                            json_match = re.search(r'\[.*\]', raw_res, re.DOTALL)
-                            if json_match:
-                                translated_data = json.loads(json_match.group())
+                            data = json.loads(raw_res)
+                            translated_data = data.get("translated_data") or data.get("data")
+                            if not translated_data:
+                                import re
+                                json_match = re.search(r'\[.*\]', raw_res, re.DOTALL)
+                                if json_match:
+                                    translated_data = json.loads(json_match.group())
+                            
+                            if translated_data:
                                 for item in translated_data:
                                     idx = item.get("id")
                                     if idx is not None and 0 <= idx < len(serializable_articles):
