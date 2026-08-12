@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to Render via Deploy Hook
         if: env.RENDER_DEPLOY_KEY != ''
         run: |
-          curl -f -X POST "https://api.render.com/deploy/srv-d9qprjtbedkc73fhjjn0?key=${{ secrets.RENDER_DEPLOY_KEY }}"
+          curl -f -X POST "https://api.render.com/deploy/srv-d8h5fat8nd3s73bsqv3g?key=${{ secrets.RENDER_DEPLOY_KEY }}"
 
       - name: No deployment credentials set
         if: env.DEPLOY_HOST == '' && env.RENDER_DEPLOY_KEY == ''
