@@ -9,9 +9,15 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      RENDER_DEPLOY_KEY: ${{ secrets.RENDER_DEPLOY_KEY }}
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Deploy to server via SSH
+        if: env.DEPLOY_HOST != ''
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -24,4 +30,12 @@ jobs:
             docker compose pull || true
             docker compose up -d --build
 
-    # NOTE: To use this workflow, set repository secrets: DEPLOY_HOST, DEPLOY_USER, SSH_PRIVATE_KEY, DEPLOY_PORT
+      - name: Deploy to Render via Deploy Hook
+        if: env.RENDER_DEPLOY_KEY != ''
+        run: |
+          curl -f -X POST "https://api.render.com/deploy/srv-d9qprjtbedkc73fhjjn0?key=${{ secrets.RENDER_DEPLOY_KEY }}"
+
+      - name: No deployment credentials set
+        if: env.DEPLOY_HOST == '' && env.RENDER_DEPLOY_KEY == ''
+        run: |
+          echo "No deployment credentials found. If you are using Render Auto-Deploy on push, your app will deploy automatically."
