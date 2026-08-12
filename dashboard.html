@@ -1930,6 +1930,345 @@
         setInterval(loadSignals, 10000);
         setInterval(loadCalendar, 60000);
         setInterval(loadNews, 30000);
+
+        // ── AI Chatbot Widget ───────────────────────────────────────────────
+        (function() {
+            // Append CSS
+            const style = document.createElement("style");
+            style.textContent = `
+                .chat-widget-btn {
+                    position: fixed;
+                    bottom: 24px;
+                    right: 24px;
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, var(--neon-accent), #a855f7);
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 8px 32px rgba(168, 85, 247, 0.4);
+                    cursor: pointer;
+                    z-index: 1000;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+                .chat-widget-btn:hover {
+                    transform: scale(1.08) rotate(5deg);
+                    box-shadow: 0 12px 40px rgba(168, 85, 247, 0.6);
+                }
+                .chat-widget-btn svg {
+                    width: 28px;
+                    height: 28px;
+                }
+                .chat-widget-btn::after {
+                    content: '';
+                    position: absolute;
+                    top: 2px;
+                    right: 2px;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    border: 2px solid var(--dashboard-bg);
+                }
+
+                .chat-drawer {
+                    position: fixed;
+                    bottom: 96px;
+                    right: 24px;
+                    width: 380px;
+                    height: 520px;
+                    border-radius: 20px;
+                    background: rgba(18, 18, 29, 0.85);
+                    backdrop-filter: blur(20px);
+                    -webkit-backdrop-filter: blur(20px);
+                    border: 1px solid var(--card-border);
+                    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+                    z-index: 1000;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    transform: translateY(30px) scale(0.95);
+                    opacity: 0;
+                    visibility: hidden;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+                .chat-drawer.open {
+                    transform: translateY(0) scale(1);
+                    opacity: 1;
+                    visibility: visible;
+                }
+
+                .chat-header {
+                    padding: 1rem 1.25rem;
+                    background: linear-gradient(90deg, rgba(168, 85, 247, 0.15), rgba(6, 182, 212, 0.15));
+                    border-bottom: 1px solid var(--card-border);
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                }
+                .chat-header-title {
+                    font-weight: 700;
+                    font-size: 0.95rem;
+                    color: var(--text-primary);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .chat-header-status {
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background: #22c55e;
+                    display: inline-block;
+                }
+                .chat-close-btn {
+                    background: none;
+                    border: none;
+                    color: var(--text-muted);
+                    cursor: pointer;
+                    font-size: 1.25rem;
+                    transition: color 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .chat-close-btn:hover {
+                    color: var(--loss);
+                }
+
+                .chat-messages {
+                    flex: 1;
+                    padding: 1.25rem;
+                    overflow-y: auto;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .chat-messages::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .chat-messages::-webkit-scrollbar-thumb {
+                    background: var(--card-border);
+                    border-radius: 10px;
+                }
+
+                .chat-bubble {
+                    max-width: 80%;
+                    padding: 0.75rem 1rem;
+                    border-radius: 16px;
+                    font-size: 0.85rem;
+                    line-height: 1.4;
+                    word-wrap: break-word;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                .chat-bubble.bot {
+                    align-self: flex-start;
+                    background: var(--card-bg);
+                    color: var(--text-primary);
+                    border-bottom-left-radius: 4px;
+                    border: 1px solid var(--card-border);
+                }
+                .chat-bubble.user {
+                    align-self: flex-end;
+                    background: linear-gradient(135deg, var(--neon-accent), #a855f7);
+                    color: white;
+                    border-bottom-right-radius: 4px;
+                }
+
+                .chat-input-area {
+                    padding: 1rem;
+                    border-top: 1px solid var(--card-border);
+                    display: flex;
+                    gap: 8px;
+                    background: rgba(18, 18, 29, 0.5);
+                }
+                .chat-input {
+                    flex: 1;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid var(--card-border);
+                    border-radius: 12px;
+                    padding: 0.75rem 1rem;
+                    color: var(--text-primary);
+                    font-size: 0.85rem;
+                    outline: none;
+                    transition: border-color 0.2s;
+                }
+                .chat-input:focus {
+                    border-color: var(--neon-accent);
+                }
+                .chat-send-btn {
+                    background: linear-gradient(135deg, var(--neon-accent), #a855f7);
+                    border: none;
+                    border-radius: 12px;
+                    width: 44px;
+                    height: 44px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                }
+                .chat-send-btn:hover {
+                    transform: scale(1.05);
+                }
+
+                .typing-indicator {
+                    display: flex;
+                    gap: 4px;
+                    align-items: center;
+                    padding: 4px 8px;
+                }
+                .typing-dot {
+                    width: 6px;
+                    height: 6px;
+                    background: var(--text-muted);
+                    border-radius: 50%;
+                    animation: typingBounce 1.4s infinite ease-in-out both;
+                }
+                .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+                .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+                @keyframes typingBounce {
+                    0%, 80%, 100% { transform: scale(0); }
+                    40% { transform: scale(1); }
+                }
+
+                @media (max-width: 480px) {
+                    .chat-drawer {
+                        width: calc(100vw - 32px);
+                        height: 460px;
+                        right: 16px;
+                        bottom: 88px;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // Append HTML elements
+            const btn = document.createElement("div");
+            btn.className = "chat-widget-btn";
+            btn.onclick = toggleChat;
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+            `;
+            document.body.appendChild(btn);
+
+            const drawer = document.createElement("div");
+            drawer.id = "chat-drawer";
+            drawer.className = "chat-drawer";
+            drawer.innerHTML = `
+                <div class="chat-header">
+                    <div class="chat-header-title">
+                        <span class="chat-header-status"></span>
+                        <span>AI Market Copilot 🤖</span>
+                    </div>
+                    <button class="chat-close-btn" onclick="toggleChat()">&times;</button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-bubble bot">
+                        Hello! I am your AI Market Assistant. Ask me anything about tickers (e.g. "analyze Gold" or "Price of BTCUSD") or general trading strategies! I ground my answers in live market data. 📈
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" class="chat-input" placeholder="Ask a question..." />
+                    <button class="chat-send-btn" onclick="sendChatMessage()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(drawer);
+
+            // Setup input listener
+            setTimeout(() => {
+                const input = document.getElementById("chat-input");
+                if (input) {
+                    input.addEventListener("keypress", function(e) {
+                        if (e.key === "Enter") {
+                            sendChatMessage();
+                        }
+                    });
+                }
+            }, 100);
+        })();
+
+        function toggleChat() {
+            const drawer = document.getElementById("chat-drawer");
+            drawer.classList.toggle("open");
+            if (drawer.classList.contains("open")) {
+                document.getElementById("chat-input").focus();
+            }
+        }
+
+        function appendChatMessage(sender, text) {
+            const container = document.getElementById("chat-messages");
+            const bubble = document.createElement("div");
+            bubble.className = `chat-bubble ${sender}`;
+            
+            let formatted = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+            
+            bubble.innerHTML = formatted;
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById("chat-input");
+            const query = input.value.trim();
+            if (!query) return;
+
+            input.value = "";
+            appendChatMessage("user", query);
+
+            const container = document.getElementById("chat-messages");
+            const indicator = document.createElement("div");
+            indicator.id = "chat-typing-indicator";
+            indicator.className = "chat-bubble bot";
+            indicator.innerHTML = `
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            container.appendChild(indicator);
+            container.scrollTop = container.scrollHeight;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/chat`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: query })
+                });
+                const data = await response.json();
+                
+                const oldIndicator = document.getElementById("chat-typing-indicator");
+                if (oldIndicator) oldIndicator.remove();
+
+                if (data.error) {
+                    appendChatMessage("bot", `⚠️ Error: ${data.error}`);
+                } else {
+                    appendChatMessage("bot", data.response);
+                }
+            } catch(e) {
+                const oldIndicator = document.getElementById("chat-typing-indicator");
+                if (oldIndicator) oldIndicator.remove();
+                appendChatMessage("bot", "⚠️ Network error. Please try again.");
+            }
+        }
     </script>
 
 </body>

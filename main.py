@@ -4507,6 +4507,34 @@ async def handle_health_check(reader, writer):
     path_only = parsed_url.path
     query_params = parse_qs(parsed_url.query)
 
+    body_data = ""
+    if method == "POST":
+        # Parse content-length from headers
+        headers_lines = req_text.split("\r\n")[1:]
+        content_length = 0
+        for line in headers_lines:
+            if line.lower().startswith("content-length:"):
+                try:
+                    content_length = int(line.split(":")[1].strip())
+                except ValueError:
+                    pass
+                break
+        
+        # Extract body from read data
+        body_parts = req_text.split("\r\n\r\n", 1)
+        if len(body_parts) > 1:
+            body_data = body_parts[1]
+            
+        # Read remaining body bytes if needed
+        already_read = len(body_data.encode("utf-8", errors="ignore"))
+        if already_read < content_length:
+            try:
+                remaining = content_length - already_read
+                extra_bytes = await reader.read(remaining)
+                body_data += extra_bytes.decode("utf-8", errors="ignore")
+            except Exception:
+                pass
+
     if method == "OPTIONS":
         response_header = (
             f"HTTP/1.1 204 No Content\r\n"
@@ -4770,9 +4798,100 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": "symbol parameter required. e.g. /api/deep-analyze?symbol=RELIANCE.NS"})
         else:
             try:
+                import yfinance as yf
+                tk = yf.Ticker(symbol)
+                hist = tk.history(period="5d")
+                if hist.empty:
+                    raise Exception(f"No real market price data found for symbol '{symbol}' on Yahoo Finance. Please enter a valid ticker.")
+                
                 import multi_agent_analysis as maa
                 result = maa.run_deep_analysis(symbol)
                 response_body = json.dumps(result)
+            except Exception as e:
+                response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/chat":
+        user_message = ""
+        if method == "POST" and body_data:
+            try:
+                payload = json.loads(body_data)
+                user_message = payload.get("message", "").strip()
+            except Exception:
+                pass
+        if not user_message:
+            user_message = query_params.get("message", [""])[0].strip()
+            
+        if not user_message:
+            response_body = json.dumps({"error": "message parameter is required."})
+        else:
+            try:
+                import re
+                detected_symbol = None
+                words = re.findall(r'[A-Za-z0-9\.\=\^]+', user_message)
+                for w in words:
+                    normalized = normalize_ticker_symbol(w)
+                    if normalized.endswith("=X") or normalized.endswith("-USD") or normalized.endswith(".NS") or normalized.startswith("^"):
+                        detected_symbol = normalized
+                        break
+                    if w.upper() in {"GOLD", "SILVER", "OIL", "WTI", "BRENT", "SPX", "NASDAQ", "RELIANCE"}:
+                        detected_symbol = normalize_ticker_symbol(w.upper())
+                        break
+                
+                market_context = ""
+                if detected_symbol:
+                    try:
+                        import yfinance as yf
+                        tk = yf.Ticker(detected_symbol)
+                        hist = tk.history(period="5d")
+                        if not hist.empty:
+                            current_price = float(hist["Close"].iloc[-1])
+                            prev_price = float(hist["Close"].iloc[-2]) if len(hist) > 1 else current_price
+                            change = current_price - prev_price
+                            change_pct = (change / prev_price) * 100 if prev_price else 0.0
+                            market_context = (
+                                f"REAL-TIME MARKET DATA FOR {detected_symbol}:\n"
+                                f"- Current Price: {current_price:.4f}\n"
+                                f"- Daily Change: {change_pct:+.2f}%\n"
+                                f"- 5-day High: {float(hist['High'].max()):.4f}\n"
+                                f"- 5-day Low: {float(hist['Low'].min()):.4f}\n"
+                                f"- Latest Volume: {int(hist['Volume'].iloc[-1])}\n\n"
+                            )
+                    except Exception:
+                        pass
+                
+                recent_news_context = ""
+                if any(k in user_message.lower() for k in ["news", "latest", "update", "today", "report"]):
+                    try:
+                        articles = fetch_latest_articles()[:5]
+                        if articles:
+                            recent_news_context = "LATEST RELEVANT MARKET NEWS:\n"
+                            for idx, a in enumerate(articles, 1):
+                                recent_news_context += f"{idx}. {a.get('title')} ({a.get('source_name', 'Market Feed')})\n"
+                            recent_news_context += "\n"
+                    except Exception:
+                        pass
+                
+                system_prompt = (
+                    "You are a premium AI Trading Assistant. You provide professional financial analysis, "
+                    "answer general trading questions, explain indicators, and analyze market trends. "
+                    "If real-time market data or news context is provided below, always base your answer and numbers strictly on it. "
+                    "Provide clear, direct, and actionable insights. Be professional and concise."
+                )
+                
+                full_prompt = ""
+                if market_context:
+                    full_prompt += market_context
+                if recent_news_context:
+                    full_prompt += recent_news_context
+                
+                full_prompt += f"User Question: {user_message}"
+                
+                answer = _analyzer_groq_chat(full_prompt, system_prompt=system_prompt)
+                if not answer:
+                    answer = "I apologize, but I am unable to generate a response at the moment. Please verify your connection or API keys."
+                
+                response_body = json.dumps({"response": answer, "symbol": detected_symbol})
             except Exception as e:
                 response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
