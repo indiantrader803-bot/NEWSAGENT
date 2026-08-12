@@ -55,9 +55,17 @@ TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
 TWITTER_USERNAMES = [item.strip() for item in os.getenv("TWITTER_USERNAMES", "reuters,investingcom,fxstreet,stocktwits,benzinga").split(",") if item.strip()]
 TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "forex crypto stocks india market").strip()
 
-SENT_KEYS_FILE = "sent_articles.json"
-SIGNAL_LOG_FILE = "signal_log.json"
-SUBSCRIBERS_FILE = "subscribers.json"
+import sys
+_is_testing = "unittest" in sys.modules or "pytest" in sys.modules
+
+if _is_testing:
+    SENT_KEYS_FILE = "test_sent_articles.json"
+    SIGNAL_LOG_FILE = "test_signal_log.json"
+    SUBSCRIBERS_FILE = "test_subscribers.json"
+else:
+    SENT_KEYS_FILE = "sent_articles.json"
+    SIGNAL_LOG_FILE = "signal_log.json"
+    SUBSCRIBERS_FILE = "subscribers.json"
 SENT_MESSAGES_FILE = "sent_messages.json"
 _seen_keys: set[str] = set()
 _signal_log: list[dict] = []

@@ -3,3 +3,6 @@ __pycache__/
 .env
 .venv/
 sent_articles.json
+test_sent_articles.json
+test_signal_log.json
+test_subscribers.json
