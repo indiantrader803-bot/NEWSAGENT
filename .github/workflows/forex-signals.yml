@@ -38,3 +38,4 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ONEMIN_API_KEY: ${{ secrets.ONEMIN_API_KEY }}
