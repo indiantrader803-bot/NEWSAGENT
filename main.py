@@ -1763,7 +1763,55 @@ def generate_asset_trade_setup(asset: str, question: str) -> str | None:
     return "\n".join(result)
 
 
+def _call_onemin_api(prompt: str, system: str | None = None, model: str = "gpt-4o") -> str | None:
+    api_key = os.getenv("ONEMIN_API_KEY", "").strip()
+    if not api_key:
+        return None
+    url = "https://api.1min.ai/api/chat-with-ai"
+    headers = {
+        "api-key": api_key,
+        "Content-Type": "application/json"
+    }
+    
+    full_prompt = ""
+    if system:
+        full_prompt += f"System Instructions:\n{system}\n\n"
+    full_prompt += prompt
+    
+    payload = {
+        "type": "UNIFY_CHAT_WITH_AI",
+        "model": model,
+        "promptObject": {
+            "prompt": full_prompt,
+            "settings": {
+                "webSearchSettings": {
+                    "webSearch": False
+                }
+            }
+        }
+    }
+    try:
+        import requests
+        resp = requests.post(url, headers=headers, json=payload, timeout=25)
+        if resp.status_code == 200:
+            res_json = resp.json()
+            detail = res_json.get("aiRecordDetail", {})
+            result_obj = detail.get("resultObject", [])
+            if result_obj and isinstance(result_obj, list):
+                return result_obj[0].strip()
+    except Exception as e:
+        print(f"[1MIN.AI ERROR]: {e}")
+    return None
+
+
 def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode: bool = False) -> str | None:
+    onemin_key = os.getenv("ONEMIN_API_KEY", "").strip()
+    if onemin_key:
+        for m in ["gpt-4o", "deepseek-chat", "gpt-4o-mini"]:
+            res = _call_onemin_api(prompt, system=system_prompt, model=m)
+            if res:
+                return res
+
     if not ANALYZER_GROQ_API_KEY:
         return None
     import requests
@@ -1799,6 +1847,13 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
 
 
 def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
+    onemin_key = os.getenv("ONEMIN_API_KEY", "").strip()
+    if onemin_key:
+        for m in ["gpt-4o", "deepseek-chat", "gpt-4o-mini"]:
+            res = _call_onemin_api(prompt, system=system_prompt, model=m)
+            if res:
+                return escape(res)
+
     if not GROQ_API_KEY:
         return None
     import requests
