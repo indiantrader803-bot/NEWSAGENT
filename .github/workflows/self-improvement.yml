@@ -1,0 +1,34 @@
+name: Daily Self-Improvement Agent
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  self-improve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to commit and push code changes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Self-Improvement Cycle
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BOT_TOKEN2: ${{ secrets.BOT_TOKEN2 }}
+          BOT_TOKEN3: ${{ secrets.BOT_TOKEN3 }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_CHAT_ID3: ${{ secrets.TELEGRAM_CHAT_ID3 }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          ONEMIN_API_KEY: ${{ secrets.ONEMIN_API_KEY }}
+        run: python self_improvement_agent.py

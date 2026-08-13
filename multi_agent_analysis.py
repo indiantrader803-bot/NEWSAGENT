@@ -335,6 +335,10 @@ def trader_node(state: AgentState) -> dict:
         f"RESEARCH SUMMARY:\n{state['research_summary']}\n\n"
         f"PRICE DATA:\n{price_data}\n\n"
         f"You are a professional trader. Based on the research, generate a concrete trade recommendation. "
+        f"Strictly enforce high Risk-to-Reward (R:R) ratios: tp1 must represent a 1:5 Risk-to-Reward ratio "
+        f"relative to the entry and Stop Loss (Reward = 5x Risk). tp2 must represent a 1:10 Risk-to-Reward "
+        f"ratio relative to the entry and Stop Loss (Reward = 10x Risk). "
+        f"Keep the Stop Loss tight to accommodate these ratios. "
         f"Output ONLY a valid JSON object (no extra text) with these exact keys:\n"
         f'{{"direction": "BUY|SELL|NEUTRAL", "entry": "price", "sl": "stop_loss", '
         f'"tp1": "target1", "tp2": "target2", "confidence": "percentage like 72%", '

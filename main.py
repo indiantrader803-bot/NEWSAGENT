@@ -4945,6 +4945,10 @@ async def handle_health_check(reader, writer):
                     f"Current Price: {current_price:.2f}, Daily Change: {change_pct:+.2f}%. "
                     f"Generate a clear trade suggestion: Direction (BUY or SELL or NEUTRAL), "
                     f"Entry Price, Stop Loss, Target 1, Target 2, Confidence level (e.g. 85%), and a 1-sentence analysis reason. "
+                    f"Strictly enforce high Risk-to-Reward (R:R) ratios: Target 1 (tp1) must represent a 1:5 Risk-to-Reward ratio "
+                    f"relative to the entry and Stop Loss (Reward = 5x Risk). Target 2 (tp2) must represent a 1:10 Risk-to-Reward "
+                    f"ratio relative to the entry and Stop Loss (Reward = 10x Risk). "
+                    f"Keep the Stop Loss tight to accommodate these ratios. "
                     f"Format the output strictly as a JSON object with keys: "
                     f"'direction', 'entry', 'sl', 'tp1', 'tp2', 'confidence', 'reason'."
                 )
