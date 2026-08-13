@@ -4498,6 +4498,193 @@ def normalize_ticker_symbol(symbol: str) -> str:
     return symbol
 
 
+def get_financials_summary(ticker) -> str:
+    try:
+        df = ticker.financials
+        if df is None or df.empty:
+            return "No Income Statement data available."
+        cols = list(df.columns)[:3]
+        lines = ["INCOME STATEMENT SUMMARY (in Millions):"]
+        header = "Metric | " + " | ".join([str(c)[:10] for c in cols])
+        lines.append(header)
+        lines.append("-" * len(header))
+        
+        metrics_of_interest = {
+            "Total Revenue": ["Total Revenue", "Revenue"],
+            "Gross Profit": ["Gross Profit"],
+            "Operating Income": ["Operating Income", "Operating Income or Loss"],
+            "Net Income": ["Net Income", "Net Income Common Stockholders"]
+        }
+        for name, keys in metrics_of_interest.items():
+            for k in keys:
+                if k in df.index:
+                    vals = []
+                    for col in cols:
+                        v = df.loc[k].get(col, 0)
+                        if isinstance(v, (int, float)):
+                            vals.append(f"{v / 1e6:.1f}M")
+                        else:
+                            vals.append(str(v))
+                    lines.append(f"{name} | " + " | ".join(vals))
+                    break
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error retrieving Income Statement: {e}"
+
+
+def get_balance_sheet_summary(ticker) -> str:
+    try:
+        df = ticker.balance_sheet
+        if df is None or df.empty:
+            return "No Balance Sheet data available."
+        cols = list(df.columns)[:3]
+        lines = ["BALANCE SHEET SUMMARY (in Millions):"]
+        header = "Metric | " + " | ".join([str(c)[:10] for c in cols])
+        lines.append(header)
+        lines.append("-" * len(header))
+        
+        metrics_of_interest = {
+            "Total Assets": ["Total Assets"],
+            "Total Liabilities": ["Total Liabilities Net Minor Interest", "Total Liabilities"],
+            "Stockholders Equity": ["Stockholders Equity", "Total Stockholders Equity"],
+            "Cash & Short Term Investments": ["Cash Cash Equivalents And Short Term Investments", "Cash And Cash Equivalents"]
+        }
+        for name, keys in metrics_of_interest.items():
+            for k in keys:
+                if k in df.index:
+                    vals = []
+                    for col in cols:
+                        v = df.loc[k].get(col, 0)
+                        if isinstance(v, (int, float)):
+                            vals.append(f"{v / 1e6:.1f}M")
+                        else:
+                            vals.append(str(v))
+                    lines.append(f"{name} | " + " | ".join(vals))
+                    break
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error retrieving Balance Sheet: {e}"
+
+
+def get_cash_flow_summary(ticker) -> str:
+    try:
+        df = ticker.cashflow
+        if df is None or df.empty:
+            return "No Cash Flow data available."
+        cols = list(df.columns)[:3]
+        lines = ["CASH FLOW SUMMARY (in Millions):"]
+        header = "Metric | " + " | ".join([str(c)[:10] for c in cols])
+        lines.append(header)
+        lines.append("-" * len(header))
+        
+        metrics_of_interest = {
+            "Operating Cash Flow": ["Operating Cash Flow", "Total Cash From Operating Activities"],
+            "Capital Expenditure": ["Capital Expenditure"],
+            "Free Cash Flow": ["Free Cash Flow"]
+        }
+        for name, keys in metrics_of_interest.items():
+            for k in keys:
+                if k in df.index:
+                    vals = []
+                    for col in cols:
+                        v = df.loc[k].get(col, 0)
+                        if isinstance(v, (int, float)):
+                            vals.append(f"{v / 1e6:.1f}M")
+                        else:
+                            vals.append(str(v))
+                    lines.append(f"{name} | " + " | ".join(vals))
+                    break
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Error retrieving Cash Flow: {e}"
+
+
+def generate_performance_chart(symbol, hist, save_path) -> bool:
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        
+        plt.style.use('dark_background')
+        fig, ax = plt.subplots(figsize=(8, 4))
+        ax.plot(hist.index, hist["Close"], color="#06b6d4", linewidth=2, label="Close Price")
+        ax.fill_between(hist.index, hist["Close"], alpha=0.15, color="#06b6d4")
+        ax.set_title(f"{symbol} Stock Performance (1 Year)", color="#e2e8f0", fontsize=12, fontweight="bold", pad=15)
+        ax.set_xlabel("Date", color="#94a3b8", fontsize=9)
+        ax.set_ylabel("Price", color="#94a3b8", fontsize=9)
+        ax.tick_params(colors="#94a3b8", labelsize=8)
+        ax.grid(True, color="#334155", linestyle="--", alpha=0.5)
+        for spine in ["top", "right"]:
+            ax.spines[spine].set_visible(False)
+        for spine in ["left", "bottom"]:
+            ax.spines[spine].set_color("#475569")
+        plt.tight_layout()
+        plt.savefig(save_path, transparent=True, dpi=150)
+        plt.close()
+        return True
+    except Exception as e:
+        print(f"[CHART ERROR]: {e}")
+        return False
+
+
+def compile_pdf_report(symbol, text_report, chart_path, save_path) -> bool:
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib import colors
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        
+        doc = SimpleDocTemplate(save_path, pagesize=letter,
+                                rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+        story = []
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'TitleStyle',
+            parent=styles['Heading1'],
+            fontSize=22,
+            leading=26,
+            textColor=colors.HexColor('#06b6d4'),
+            spaceAfter=15
+        )
+        subtitle_style = ParagraphStyle(
+            'SubTitleStyle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            leading=18,
+            textColor=colors.HexColor('#a855f7'),
+            spaceAfter=10,
+            spaceBefore=15
+        )
+        body_style = ParagraphStyle(
+            'BodyStyle',
+            parent=styles['Normal'],
+            fontSize=10,
+            leading=14,
+            textColor=colors.HexColor('#1e293b')
+        )
+        story.append(Paragraph(f"FinRobot Institutional Equity Report - {symbol}", title_style))
+        story.append(Spacer(1, 10))
+        sections = text_report.split("\n\n")
+        for sec in sections:
+            if sec.startswith("### "):
+                story.append(Paragraph(sec[4:].strip(), subtitle_style))
+            elif sec.startswith("## "):
+                story.append(Paragraph(sec[3:].strip(), subtitle_style))
+            else:
+                story.append(Paragraph(sec.replace("\n", "<br/>").strip(), body_style))
+                story.append(Spacer(1, 10))
+        if os.path.exists(chart_path):
+            story.append(Spacer(1, 15))
+            story.append(Paragraph("Stock Performance Visual Chart", subtitle_style))
+            img = Image(chart_path, width=400, height=200)
+            story.append(img)
+        doc.build(story)
+        return True
+    except Exception as e:
+        print(f"[PDF ERROR]: {e}")
+        return False
+
+
 async def handle_health_check(reader, writer):
     try:
         request = await reader.read(1024)
@@ -4949,6 +5136,107 @@ async def handle_health_check(reader, writer):
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
+
+    elif path_only == "/api/finrobot-report":
+        symbol = query_params.get("symbol", [""])[0].strip()
+        symbol = normalize_ticker_symbol(symbol)
+        if not symbol:
+            response_body = json.dumps({"error": "symbol parameter is required. e.g. /api/finrobot-report?symbol=AAPL"})
+            content_type = "application/json"
+        else:
+            try:
+                import yfinance as yf
+                tk = yf.Ticker(symbol)
+                hist = tk.history(period="1y")
+                if hist.empty:
+                    raise Exception(f"No price data found for symbol '{symbol}' on Yahoo Finance.")
+                
+                inc_stmt = get_financials_summary(tk)
+                bal_sheet = get_balance_sheet_summary(tk)
+                cflow = get_cash_flow_summary(tk)
+                
+                import os
+                os.makedirs("reports", exist_ok=True)
+                chart_filename = f"{symbol.replace('=', '_').replace('^', '_')}_perf.png"
+                pdf_filename = f"{symbol.replace('=', '_').replace('^', '_')}_report.pdf"
+                chart_path = os.path.join("reports", chart_filename)
+                pdf_path = os.path.join("reports", pdf_filename)
+                
+                generate_performance_chart(symbol, hist, chart_path)
+                
+                data_context = (
+                    f"Company Stock Symbol: {symbol}\n\n"
+                    f"{inc_stmt}\n\n"
+                    f"{bal_sheet}\n\n"
+                    f"{cflow}\n\n"
+                    f"Current Stock Price: {hist['Close'].iloc[-1]:.2f}\n"
+                    f"52-Week High: {hist['High'].max():.2f}\n"
+                    f"52-Week Low: {hist['Low'].min():.2f}\n"
+                )
+                
+                system_prompt = (
+                    "You are a Senior Wall Street Analyst at FinRobot AI. Your job is to compile a highly detailed, "
+                    "comprehensive institutional financial report based on real company data. "
+                    "Analyze the financials, check balance sheet stability, evaluate operational cash flow, "
+                    "outline the key risk factors (at least 3 risk assessments), and write a professional investment thesis. "
+                    "Format your response in structured markdown with headings like '## Executive Summary', "
+                    "'## Financial Statement Analysis', '## Risk Assessments', and '## Investment Thesis'. "
+                    "Be detailed, data-driven, and highly professional. Avoid generic boilerplate."
+                )
+                
+                report_text = _analyzer_groq_chat(data_context, system_prompt=system_prompt)
+                if not report_text:
+                    report_text = "Analysis report generation failed due to API limitations."
+                
+                compile_pdf_report(symbol, report_text, chart_path, pdf_path)
+                
+                response_body = json.dumps({
+                    "symbol": symbol,
+                    "income_statement": inc_stmt,
+                    "balance_sheet": bal_sheet,
+                    "cash_flow": cflow,
+                    "report_content": report_text,
+                    "chart_url": f"/reports/{chart_filename}",
+                    "pdf_url": f"/reports/{pdf_filename}"
+                })
+            except Exception as e:
+                response_body = json.dumps({"error": str(e)})
+            content_type = "application/json"
+
+    elif path_only.startswith("/reports/"):
+        import os
+        filename = os.path.basename(path_only)
+        report_dir = os.path.abspath("reports")
+        filepath = os.path.join(report_dir, filename)
+        
+        if os.path.commonpath([report_dir, filepath]) == report_dir and os.path.exists(filepath):
+            try:
+                with open(filepath, "rb") as f:
+                    response_bytes = f.read()
+                
+                if filename.endswith(".png"):
+                    content_type = "image/png"
+                elif filename.endswith(".pdf"):
+                    content_type = "application/pdf"
+                else:
+                    content_type = "application/octet-stream"
+                
+                response_header = (
+                    f"HTTP/1.1 200 OK\r\n"
+                    f"Content-Type: {content_type}\r\n"
+                    f"Content-Length: {len(response_bytes)}\r\n"
+                    f"Access-Control-Allow-Origin: *\r\n"
+                    f"Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+                    f"Access-Control-Allow-Headers: Content-Type\r\n"
+                    f"Connection: close\r\n\r\n"
+                )
+                writer.write(response_header.encode("utf-8") + response_bytes)
+                await writer.drain()
+                writer.close()
+                await writer.wait_closed()
+                return
+            except Exception:
+                pass
 
     elif path_only == "/" or path_only == "/dashboard":
 

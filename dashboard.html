@@ -811,6 +811,9 @@
             <li class="nav-item" onclick="switchPage('page-deep-analysis', this)">
                 🧠 Deep Analysis
             </li>
+            <li class="nav-item" onclick="switchPage('page-finrobot', this)">
+                🤖 FinRobot Analyst
+            </li>
             <li class="nav-item" onclick="switchPage('page-tools', this)">
                 🛠️ Trading Toolkit
             </li>
@@ -1053,6 +1056,35 @@
                     </div>
 
                     <div id="deep-result"></div>
+                </div>
+            </div>
+
+            <!-- PAGE: FinRobot Analyst -->
+            <div class="page-panel" id="page-finrobot">
+                <div style="max-width: 760px; margin: 0 auto; width: 100%;">
+                    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">🤖 FinRobot AI Analyst</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                        Generates a comprehensive institutional-grade equity research report with Income Statement, Balance Sheet, Cash Flow summaries, a custom matplotlib performance chart, and a downloadable PDF.
+                    </p>
+                    <div class="input-group" style="margin-bottom: 1.5rem;">
+                        <input type="text" class="txt-symbol" id="finrobot-symbol-input" placeholder="e.g. AAPL, MSFT, TSLA, RELIANCE.NS…" />
+                        <button class="btn-analyze" id="finrobot-analyze-btn" onclick="runFinRobotAnalysis()">Generate Report</button>
+                    </div>
+
+                    <!-- Progress stepper -->
+                    <div id="finrobot-stepper" style="display:none; margin-bottom:1.5rem;">
+                        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                            <span id="step-fr-fetch" class="deep-step">📥 Fetch Data</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-fr-chart" class="deep-step">📈 Plot Chart</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-fr-analyze" class="deep-step">🧠 FinRobot AI</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-fr-pdf" class="deep-step">📄 Compile PDF</span>
+                        </div>
+                    </div>
+
+                    <div id="finrobot-result"></div>
                 </div>
             </div>
 
@@ -1910,6 +1942,92 @@
                 btn.disabled = false;
                 btn.textContent = 'Run Deep Analysis';
                 result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ Network error. Try again.</div>`;
+            }
+        }
+
+        async function runFinRobotAnalysis() {
+            const symbol = document.getElementById('finrobot-symbol-input').value.trim();
+            if (!symbol) { alert('Enter a symbol first.'); return; }
+
+            const btn = document.getElementById('finrobot-analyze-btn');
+            const stepper = document.getElementById('finrobot-stepper');
+            const result = document.getElementById('finrobot-result');
+            const steps = ['step-fr-fetch','step-fr-chart','step-fr-analyze','step-fr-pdf'];
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Running FinRobot pipeline…';
+            stepper.style.display = 'block';
+            result.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:2rem;">⏳ FinRobot AI agents are compiling report — this takes ~30 seconds…</div>';
+            steps.forEach(s => { const el = document.getElementById(s); el.className = 'deep-step'; });
+
+            let stepIdx = 0;
+            const stepInterval = setInterval(() => {
+                if (stepIdx > 0) document.getElementById(steps[stepIdx-1]).className = 'deep-step done';
+                if (stepIdx < steps.length) document.getElementById(steps[stepIdx]).className = 'deep-step active';
+                stepIdx++;
+                if (stepIdx > steps.length) clearInterval(stepInterval);
+            }, 6000);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/finrobot-report?symbol=${encodeURIComponent(symbol)}`);
+                const data = await res.json();
+                clearInterval(stepInterval);
+                steps.forEach(s => document.getElementById(s).className = 'deep-step done');
+                btn.disabled = false;
+                btn.textContent = 'Generate Report';
+
+                if (data.error) {
+                    result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ ${data.error}</div>`;
+                    return;
+                }
+
+                let formattedReport = data.report_content
+                    .replace(/\n\n/g, '<br/><br/>')
+                    .replace(/### (.*)/g, '<h4 style="font-size:1.1rem;font-weight:700;color:var(--neon-accent);margin:1.5rem 0 0.5rem 0;">$1</h4>')
+                    .replace(/## (.*)/g, '<h3 style="font-size:1.3rem;font-weight:800;color:var(--neon-accent);margin:1.8rem 0 0.8rem 0;">$1</h3>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                result.innerHTML = `
+                    <div style="display:flex;flex-direction:column;gap:1.5rem;" class="card-animate">
+                        <!-- Chart Display -->
+                        <div class="synth-card" style="text-align:center;padding:1.5rem;">
+                            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:12px;text-align:left;">📈 Performance Chart</div>
+                            <img src="${API_BASE}${data.chart_url}" style="max-width:100%;border-radius:8px;border:1px solid var(--card-border);" alt="Stock Chart" />
+                        </div>
+
+                        <!-- Statement Summaries side-by-side -->
+                        <div style="display:grid;grid-template-columns:1fr;gap:1rem;font-size:0.8rem;">
+                            <div class="synth-card">
+                                <div style="font-weight:700;margin-bottom:0.5rem;color:var(--neon-accent);">📑 Income Statement Summary</div>
+                                <pre style="font-family:monospace;white-space:pre-wrap;color:var(--text-muted);margin:0;">${data.income_statement}</pre>
+                            </div>
+                            <div class="synth-card">
+                                <div style="font-weight:700;margin-bottom:0.5rem;color:var(--neon-accent);">⚖️ Balance Sheet Summary</div>
+                                <pre style="font-family:monospace;white-space:pre-wrap;color:var(--text-muted);margin:0;">${data.balance_sheet}</pre>
+                            </div>
+                            <div class="synth-card">
+                                <div style="font-weight:700;margin-bottom:0.5rem;color:var(--neon-accent);">💸 Cash Flow Summary</div>
+                                <pre style="font-family:monospace;white-space:pre-wrap;color:var(--text-muted);margin:0;">${data.cash_flow}</pre>
+                            </div>
+                        </div>
+
+                        <!-- AI Report Text -->
+                        <div class="synth-card" style="padding:1.8rem;">
+                            <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:12px;">🤖 FinRobot Agent Analysis</div>
+                            <div style="font-size:0.92rem;line-height:1.6;color:var(--text-muted);">${formattedReport}</div>
+                        </div>
+
+                        <!-- PDF Download Button -->
+                        <div style="text-align:center;margin-top:1rem;">
+                            <a href="${API_BASE}${data.pdf_url}" target="_blank" class="btn-analyze" style="text-decoration:none;display:inline-block;padding:0.75rem 2rem;border-radius:8px;font-weight:700;background:var(--neon-accent);color:white;">📥 Download PDF Report</a>
+                        </div>
+                    </div>
+                `;
+            } catch(e) {
+                clearInterval(stepInterval);
+                btn.disabled = false;
+                btn.textContent = 'Generate Report';
+                result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ Connection Failed: ${e}</div>`;
             }
         }
 

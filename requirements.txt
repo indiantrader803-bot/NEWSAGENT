@@ -9,3 +9,7 @@ pandas
 beautifulsoup4
 langgraph
 Pillow
+reportlab
+matplotlib
+pyautogen
+finrobot
