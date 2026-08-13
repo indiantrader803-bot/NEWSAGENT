@@ -5016,8 +5016,11 @@ async def handle_health_check(reader, writer):
 
     elif path_only == "/api/indian-intel":
         try:
+            exchange = query_params.get("exchange", ["NSE"])[0].upper()
+            if exchange not in ("NSE", "BSE"):
+                exchange = "NSE"
             import indian_scoring as iscoring
-            intel = iscoring.get_full_intel()
+            intel = iscoring.get_full_intel(exchange=exchange)
             response_body = json.dumps(intel)
         except Exception as e:
             response_body = json.dumps({"error": str(e)})

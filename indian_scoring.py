@@ -52,12 +52,12 @@ _fii_cache: dict | None = None
 _fii_cache_time: float = 0
 _FII_CACHE_TTL = 3600  # 1 hour
 
-_intel_cache: dict | None = None
-_intel_cache_time: float = 0
+_intel_cache: dict = {}
+_intel_cache_time: dict = {}
 _INTEL_CACHE_TTL = 900  # 15 minutes
 
-_scan_cache: list[dict] | None = None
-_scan_cache_time: float = 0
+_scan_cache: dict = {}
+_scan_cache_time: dict = {}
 _SCAN_CACHE_TTL = 900  # 15 minutes
 
 
@@ -178,9 +178,10 @@ def days_until_next_fno_expiry() -> int:
 
 
 # ── Individual Stock Scorer ───────────────────────────────────────────────────
-def score_indian_stock(ticker: str, fii_net: float = 0.0) -> dict[str, Any]:
-    """Score a single NSE stock using technical + FII signals."""
-    ns_ticker = f"{ticker}.NS"
+def score_indian_stock(ticker: str, fii_net: float = 0.0, exchange: str = "NSE") -> dict[str, Any]:
+    """Score a single NSE/BSE stock using technical + FII signals."""
+    suffix = ".NS" if exchange.upper() == "NSE" else ".BO"
+    ns_ticker = f"{ticker}{suffix}"
     try:
         tk = yf.Ticker(ns_ticker)
         hist = tk.history(period="60d")
@@ -285,26 +286,26 @@ def score_indian_stock(ticker: str, fii_net: float = 0.0) -> dict[str, Any]:
 
 
 # ── NIFTY 100 Scanner ─────────────────────────────────────────────────────────
-def scan_nifty100(fii_net: float = 0.0, limit: int = 15) -> list[dict]:
+def scan_nifty100(fii_net: float = 0.0, limit: int = 15, exchange: str = "NSE") -> list[dict]:
     """Scan top NIFTY stocks and return top signals sorted by absolute score."""
     global _scan_cache, _scan_cache_time
     now = time()
-    if _scan_cache is not None and (now - _scan_cache_time) < _SCAN_CACHE_TTL:
-        results = list(_scan_cache)
+    if exchange in _scan_cache and (now - _scan_cache_time.get(exchange, 0)) < _SCAN_CACHE_TTL:
+        results = list(_scan_cache[exchange])
         results.sort(key=lambda x: x["score"], reverse=True)
         return results[:limit]
 
     results = []
     for ticker in NIFTY100_TICKERS:
         try:
-            result = score_indian_stock(ticker, fii_net)
+            result = score_indian_stock(ticker, fii_net, exchange=exchange)
             if "error" not in result and abs(result["score"]) >= 1.5:
                 results.append(result)
         except Exception:
             pass
 
-    _scan_cache = results
-    _scan_cache_time = now
+    _scan_cache[exchange] = results
+    _scan_cache_time[exchange] = now
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:limit]
@@ -364,18 +365,17 @@ def generate_daily_verdict(scan_results: list[dict], fii_net: float = 0.0) -> di
         }
 
 
-# ── Full Intel Package ────────────────────────────────────────────────────────
-def get_full_intel() -> dict[str, Any]:
+def get_full_intel(exchange: str = "NSE") -> dict[str, Any]:
     """Build the complete Indian Market Intelligence payload for the API."""
     global _intel_cache, _intel_cache_time
     now = time()
-    if _intel_cache is not None and (now - _intel_cache_time) < _INTEL_CACHE_TTL:
-        return _intel_cache
+    if exchange in _intel_cache and (now - _intel_cache_time.get(exchange, 0)) < _INTEL_CACHE_TTL:
+        return _intel_cache[exchange]
 
     fii_data = fetch_fii_dii_flow()
     fii_net = fii_data.get("fii_net", 0.0)
 
-    scan_results = scan_nifty100(fii_net=fii_net, limit=15)
+    scan_results = scan_nifty100(fii_net=fii_net, limit=15, exchange=exchange)
     verdict = generate_daily_verdict(scan_results, fii_net=fii_net)
     is_risky, risk_reason = is_high_risk_day()
     fno_days = days_until_next_fno_expiry()
@@ -400,6 +400,6 @@ def get_full_intel() -> dict[str, Any]:
         "risk_reason": risk_reason,
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
     }
-    _intel_cache = result
-    _intel_cache_time = now
+    _intel_cache[exchange] = result
+    _intel_cache_time[exchange] = now
     return result

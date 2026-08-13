@@ -999,9 +999,33 @@
 
                 <!-- NIFTY 100 Scanner Table -->
                 <div>
-                    <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">
-                        <span class="live-dot"></span> NIFTY 100 Signal Scanner
-                    </h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">
+                            <span class="live-dot"></span> NIFTY 100 Signal Scanner
+                        </h3>
+                        <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <select class="filter-input" id="intel-exchange-select" onchange="changeExchange()" style="min-width: 120px;">
+                                <option value="NSE">NSE India</option>
+                                <option value="BSE">BSE India</option>
+                            </select>
+                            <select class="filter-input" id="intel-sector-select" onchange="filterSector()" style="min-width: 140px;">
+                                <option value="ALL">All Sectors</option>
+                                <option value="Banking">Banking</option>
+                                <option value="IT">IT & Tech</option>
+                                <option value="FMCG">FMCG</option>
+                                <option value="Auto">Auto</option>
+                                <option value="Pharma">Pharma</option>
+                                <option value="Consumer">Consumer</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Metals">Metals</option>
+                                <option value="Power">Power</option>
+                                <option value="Cement">Cement</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Telecom">Telecom</option>
+                                <option value="Infra">Infra</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="table-container">
                         <table>
                             <thead><tr>
@@ -1860,10 +1884,13 @@
         }
 
         // ── Indian Market Intelligence ──────────────────────────────────────
+        let scannedStocks = [];
+
         async function loadIndianIntel() {
             if (intelLoaded) return;
             try {
-                const res = await fetch(`${API_BASE}/api/indian-intel`);
+                const exchange = document.getElementById("intel-exchange-select").value || "NSE";
+                const res = await fetch(`${API_BASE}/api/indian-intel?exchange=${exchange}`);
                 const data = await res.json();
                 if (data.error) { console.error('Intel error:', data.error); return; }
 
@@ -1897,34 +1924,8 @@
                 document.getElementById('intel-fno-days').textContent = data.fno_days ?? '—';
 
                 // NIFTY Scanner Table
-                const scanTable = document.getElementById('intel-scan-table');
-                scanTable.innerHTML = '';
-                const scan = data.scan || [];
-                if (scan.length === 0) {
-                    scanTable.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">No strong signals found today.</td></tr>';
-                } else {
-                    scan.forEach((s, i) => {
-                        const changeColor = s.change_pct >= 0 ? 'var(--gain)' : 'var(--loss)';
-                        const scoreColor = s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--text-muted)';
-                        const rsiColor = s.rsi < 35 ? 'var(--gain)' : s.rsi > 65 ? 'var(--loss)' : 'inherit';
-                        const row = document.createElement('tr');
-                        row.className = 'card-animate';
-                        row.style.animationDelay = (i * 40) + 'ms';
-                        row.innerHTML = `
-                            <td style="font-weight:700; color:var(--neon-accent);">${s.ticker}</td>
-                            <td style="font-size:0.8rem; color:var(--text-muted);">${s.sector || '—'}</td>
-                            <td class="num" style="font-weight:600;">₹${(s.price || 0).toLocaleString('en-IN')}</td>
-                            <td class="num" style="font-weight:600; color:${changeColor};">${s.change_pct >= 0 ? '+' : ''}${s.change_pct}%</td>
-                            <td class="num" style="color:${rsiColor}; font-weight:600;">${s.rsi}</td>
-                            <td class="num" style="font-weight:700; color:${scoreColor};">${s.score >= 0 ? '+' : ''}${s.score}</td>
-                            <td><span style="padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;
-                                background:${s.score >= 2 ? 'rgba(0,200,83,0.15)' : s.score <= -2 ? 'rgba(255,61,61,0.15)' : 'rgba(99,102,241,0.12)'};
-                                color:${s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--neon-accent)'};">${s.badge || ''} ${s.rating}</span></td>
-                            <td style="font-size:0.78rem; color:var(--text-muted); max-width:180px;">${(s.signals || []).slice(0,2).join(', ')}</td>
-                        `;
-                        scanTable.appendChild(row);
-                    });
-                }
+                scannedStocks = data.scan || [];
+                renderScannerTable();
 
                 // Sector Summary
                 const sectorEl = document.getElementById('intel-sectors');
@@ -1944,6 +1945,52 @@
             } catch(e) {
                 console.error('Failed to load Indian Intel:', e);
             }
+        }
+
+        function renderScannerTable() {
+            const scanTable = document.getElementById('intel-scan-table');
+            scanTable.innerHTML = '';
+            
+            const sectorFilter = document.getElementById("intel-sector-select").value || "ALL";
+            const filtered = scannedStocks.filter(s => {
+                return sectorFilter === "ALL" || (s.sector || "").toLowerCase() === sectorFilter.toLowerCase();
+            });
+
+            if (filtered.length === 0) {
+                scanTable.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text-muted);">No matching signals found.</td></tr>';
+                return;
+            }
+
+            filtered.forEach((s, i) => {
+                const changeColor = s.change_pct >= 0 ? 'var(--gain)' : 'var(--loss)';
+                const scoreColor = s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--text-muted)';
+                const rsiColor = s.rsi < 35 ? 'var(--gain)' : s.rsi > 65 ? 'var(--loss)' : 'inherit';
+                const row = document.createElement('tr');
+                row.className = 'card-animate';
+                row.style.animationDelay = (i * 40) + 'ms';
+                row.innerHTML = `
+                    <td style="font-weight:700; color:var(--neon-accent);">${s.ticker}</td>
+                    <td style="font-size:0.8rem; color:var(--text-muted);">${s.sector || '—'}</td>
+                    <td class="num" style="font-weight:600;">₹${(s.price || 0).toLocaleString('en-IN')}</td>
+                    <td class="num" style="font-weight:600; color:${changeColor};">${s.change_pct >= 0 ? '+' : ''}${s.change_pct}%</td>
+                    <td class="num" style="color:${rsiColor}; font-weight:600;">${s.rsi}</td>
+                    <td class="num" style="font-weight:700; color:${scoreColor};">${s.score >= 0 ? '+' : ''}${s.score}</td>
+                    <td><span style="padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;
+                        background:${s.score >= 2 ? 'rgba(0,200,83,0.15)' : s.score <= -2 ? 'rgba(255,61,61,0.15)' : 'rgba(99,102,241,0.12)'};
+                        color:${s.score >= 2 ? 'var(--gain)' : s.score <= -2 ? 'var(--loss)' : 'var(--neon-accent)'};">${s.badge || ''} ${s.rating}</span></td>
+                    <td style="font-size:0.78rem; color:var(--text-muted); max-width:180px;">${(s.signals || []).slice(0,2).join(', ')}</td>
+                `;
+                scanTable.appendChild(row);
+            });
+        }
+
+        function changeExchange() {
+            intelLoaded = false;
+            loadIndianIntel();
+        }
+
+        function filterSector() {
+            renderScannerTable();
         }
 
         // ── Deep Analysis (Multi-Agent) ─────────────────────────────────────
