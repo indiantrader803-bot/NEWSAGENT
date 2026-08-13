@@ -936,13 +936,14 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Time (UTC)</th>
+                                <th>Time (IST)</th>
                                 <th>Currency</th>
                                 <th>Economic Indicator</th>
                                 <th>Impact</th>
                                 <th>Forecast</th>
                                 <th>Previous</th>
                                 <th>Actual</th>
+                                <th>Timer / Analysis</th>
                             </tr>
                         </thead>
                         <tbody id="calendar-container">
@@ -1660,7 +1661,7 @@
             container.innerHTML = "";
 
             if (!allEvents || allEvents.length === 0) {
-                container.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No calendar events available this week.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No calendar events available this week.</td></tr>`;
                 return;
             }
 
@@ -1672,20 +1673,25 @@
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No events matching your filters.</td></tr>`;
+                container.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">No events matching your filters.</td></tr>`;
                 return;
             }
 
-            // Group by date
+            // Group by India Time date
             const byDate = {};
             filtered.forEach(ev => {
-                const d = ev.date || "Unknown";
-                if (!byDate[d]) byDate[d] = [];
-                byDate[d].push(ev);
+                let dKey = "Unknown";
+                if (ev.datetime) {
+                    const localDate = new Date(ev.datetime);
+                    const options = { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" };
+                    const parts = localDate.toLocaleDateString("en-US", options).split("/");
+                    dKey = `${parts[0]}-${parts[1]}-${parts[2]}`; // MM-DD-YYYY
+                }
+                if (!byDate[dKey]) byDate[dKey] = [];
+                byDate[dKey].push(ev);
             });
 
             Object.keys(byDate).sort().forEach(dateKey => {
-                // Date separator row
                 const [m, d, y] = (dateKey || "--").split("-");
                 const dateObj = new Date(`${y}-${m}-${d}`);
                 const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -1693,7 +1699,7 @@
                 const dateLabel = isNaN(dateObj) ? dateKey : `${dayNames[dateObj.getDay()]}, ${monNames[dateObj.getMonth()]} ${d}, ${y}`;
 
                 const sepRow = document.createElement("tr");
-                sepRow.innerHTML = `<td colspan="7" style="background: rgba(99,102,241,0.15); color: var(--neon-accent); font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1rem; letter-spacing: 0.05em;">📅 ${dateLabel}</td>`;
+                sepRow.innerHTML = `<td colspan="8" style="background: rgba(99,102,241,0.15); color: var(--neon-accent); font-weight: 700; font-size: 0.85rem; padding: 0.6rem 1rem; letter-spacing: 0.05em;">📅 ${dateLabel} (India Time)</td>`;
                 container.appendChild(sepRow);
 
                 byDate[dateKey].forEach(ev => {
@@ -1709,19 +1715,110 @@
                     const previous = ev.previous && ev.previous !== "N/A" ? ev.previous : "—";
                     const actual = ev.actual && ev.actual !== "N/A" ? `<span style="color:#10b981;font-weight:700;">${ev.actual}</span>` : `<span style="color:var(--text-muted);">Pending</span>`;
 
+                    // Format Time in Asia/Kolkata
+                    let localTimeStr = "All Day";
+                    if (ev.datetime) {
+                        const localDate = new Date(ev.datetime);
+                        localTimeStr = localDate.toLocaleTimeString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+                    }
+
                     const row = document.createElement("tr");
                     row.innerHTML = `
-                        <td style="font-size:0.82rem; color: var(--text-muted);">${ev.time || "All Day"}</td>
+                        <td style="font-size:0.82rem; color: var(--text-muted); font-weight: 600;">${localTimeStr}</td>
                         <td style="font-weight: 700; color: var(--neon-accent);">${ev.country || "—"}</td>
                         <td style="font-weight: 600;">${ev.title || "—"}</td>
                         <td><span class="impact-badge ${badgeClass}">${impIcon} ${imp}</span></td>
                         <td style="font-weight: 600; color: var(--secondary-accent);">${forecast}</td>
                         <td style="font-weight: 600; color: var(--text-muted);">${previous}</td>
                         <td>${actual}</td>
+                        <td class="cal-countdown" data-datetime="${ev.datetime || ''}" data-title="${encodeURIComponent(ev.title || '')}" data-country="${encodeURIComponent(ev.country || '')}" data-forecast="${encodeURIComponent(ev.forecast || '')}" data-previous="${encodeURIComponent(ev.previous || '')}" data-actual="${encodeURIComponent(ev.actual || '')}" data-impact="${ev.impact || ''}">
+                            <span style="color:var(--text-muted); font-size:0.75rem;">Scheduled</span>
+                        </td>
                     `;
                     container.appendChild(row);
                 });
             });
+            tickCalendarCountdowns();
+        }
+
+        function tickCalendarCountdowns() {
+            document.querySelectorAll(".cal-countdown").forEach(el => {
+                const dtStr = el.getAttribute("data-datetime");
+                if (!dtStr) return;
+                const eventTime = new Date(dtStr);
+                const now = new Date();
+                const diffSec = Math.floor((eventTime - now) / 1000);
+                
+                const title = el.getAttribute("data-title");
+                const country = el.getAttribute("data-country");
+                const forecast = el.getAttribute("data-forecast");
+                const previous = el.getAttribute("data-previous");
+                const actual = el.getAttribute("data-actual");
+                const impact = el.getAttribute("data-impact");
+
+                if (diffSec > 0 && diffSec <= 10) {
+                    el.innerHTML = `<span style="color:#ef4444; font-weight:700; animation: pulse 1s infinite; display:inline-block;">🚨 Release: ${diffSec}s</span>`;
+                } else if (diffSec <= 0) {
+                    if (actual === "N/A" || !actual || actual === "%25" || actual === "null") {
+                        el.innerHTML = `<button class="btn-analyze" style="padding:0.25rem 0.5rem; font-size:0.75rem;" onclick="analyzeEventImpact('${title}', '${country}', '${forecast}', '${previous}')">⏳ Analyze Impact</button>`;
+                    } else {
+                        el.innerHTML = `<button class="btn-analyze" style="padding:0.25rem 0.5rem; font-size:0.75rem; background:rgba(16,185,129,0.2); color:#10b981; border-color:#10b981;" onclick="analyzeEventImpact('${title}', '${country}', '${forecast}', '${previous}', '${actual}')">📊 View Analysis</button>`;
+                    }
+                } else {
+                    el.innerHTML = `<span style="color:var(--text-muted); font-size:0.75rem;">Scheduled</span>`;
+                }
+            });
+        }
+        
+        setInterval(tickCalendarCountdowns, 1000);
+
+        async function analyzeEventImpact(title, country, forecast, previous, actual) {
+            title = decodeURIComponent(title);
+            country = decodeURIComponent(country);
+            forecast = decodeURIComponent(forecast);
+            previous = decodeURIComponent(previous);
+            actual = actual ? decodeURIComponent(actual) : "Pending";
+            
+            const overlayId = "calendar-analysis-overlay";
+            let overlay = document.getElementById(overlayId);
+            if (!overlay) {
+                overlay = document.createElement("div");
+                overlay.id = overlayId;
+                overlay.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); z-index:9999; display:flex; justify-content:center; align-items:center; opacity:0; transition:opacity 200ms ease;";
+                document.body.appendChild(overlay);
+            }
+            
+            overlay.innerHTML = `
+                <div style="background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:2rem; max-width:550px; width:90%; box-shadow:0 20px 40px rgba(0,0,0,0.5); text-align:left; position:relative;">
+                    <button onclick="document.getElementById('${overlayId}').style.opacity='0'; setTimeout(()=>document.getElementById('${overlayId}').remove(), 200);" style="position:absolute; top:1.2rem; right:1.2rem; background:none; border:none; color:var(--text-muted); font-size:1.5rem; cursor:pointer;">&times;</button>
+                    <h3 style="color:var(--neon-accent); font-weight:800; font-size:1.2rem; margin-bottom:1rem;">📊 Live Macro Impact Analysis</h3>
+                    <div style="font-size:0.95rem; font-weight:700; margin-bottom:0.5rem; color:#e2e8f0;">${title} (${country})</div>
+                    <div style="display:flex; gap:1.5rem; font-size:0.8rem; color:var(--text-muted); margin-bottom:1.5rem;">
+                        <div>Forecast: <b>${forecast}</b></div>
+                        <div>Previous: <b>${previous}</b></div>
+                        <div>Actual: <b style="color:#10b981;">${actual}</b></div>
+                    </div>
+                    <div id="calendar-analysis-body" style="font-size:0.88rem; line-height:1.6; color:var(--text-muted);">
+                        ⏳ Running FinRobot real-time position analysis...
+                    </div>
+                </div>
+            `;
+            
+            overlay.style.display = "flex";
+            setTimeout(() => overlay.style.opacity = "1", 10);
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/calendar-analyze?title=${encodeURIComponent(title)}&country=${encodeURIComponent(country)}&actual=${encodeURIComponent(actual)}&forecast=${encodeURIComponent(forecast)}&previous=${encodeURIComponent(previous)}`);
+                const data = await res.json();
+                const body = document.getElementById("calendar-analysis-body");
+                if (data.error) {
+                    body.innerHTML = `<span style="color:#ef4444;">⚠️ Analysis failed: ${data.error}</span>`;
+                } else {
+                    body.innerHTML = data.analysis.replace(/\n/g, "<br/>");
+                }
+            } catch(e) {
+                document.getElementById("calendar-analysis-body").innerHTML = `<span style="color:#ef4444;">⚠️ Connection failed.</span>`;
+            }
         }
 
         // Load Sentiment News

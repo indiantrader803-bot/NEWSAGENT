@@ -4810,11 +4810,55 @@ async def handle_health_check(reader, writer):
                     "forecast": ev.get("forecast", "N/A"),
                     "previous": ev.get("previous", "N/A"),
                     "actual": ev.get("actual", "N/A"),
+                    "datetime": ev["datetime"].isoformat() if ev.get("datetime") else None
                 })
             response_body = json.dumps(serializable_events)
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
+
+    elif path_only == "/api/calendar-analyze":
+        title = query_params.get("title", [""])[0].strip()
+        country = query_params.get("country", [""])[0].strip()
+        actual = query_params.get("actual", [""])[0].strip()
+        forecast = query_params.get("forecast", [""])[0].strip()
+        previous = query_params.get("previous", [""])[0].strip()
+        
+        if not title:
+            response_body = json.dumps({"error": "title parameter is required."})
+            content_type = "application/json"
+        else:
+            try:
+                import yfinance as yf
+                ref_assets = ["XAU/USD", "EUR/USD", "USD/INR", "^NSEI"]
+                prices_summary = []
+                for asset in ref_assets:
+                    try:
+                        ticker = normalize_ticker_symbol(asset)
+                        tk = yf.Ticker(ticker)
+                        hist = tk.history(period="1d")
+                        if not hist.empty:
+                            prices_summary.append(f"{asset}: {hist['Close'].iloc[-1]:.2f}")
+                    except Exception:
+                        pass
+                
+                prices_ctx = ", ".join(prices_summary)
+                
+                prompt = (
+                    f"Perform a rapid, professional position impact analysis for this macro economic event:\n"
+                    f"Event: {title} ({country})\n"
+                    f"Actual: {actual} | Forecast: {forecast} | Previous: {previous}\n\n"
+                    f"Current Market Prices context: {prices_ctx}\n\n"
+                    f"Explain in 2-3 sentences:\n"
+                    f"1. Short detail summary of the news value.\n"
+                    f"2. Precise impact analysis on trading positions (e.g. Bullish/Bearish for Gold, USD, or Indian Stocks)."
+                )
+                
+                analysis = _analyzer_groq_chat(prompt, system_prompt="You are a senior macro trading strategist. Be concise, direct and data-driven.")
+                response_body = json.dumps({"analysis": analysis})
+            except Exception as e:
+                response_body = json.dumps({"error": str(e)})
+            content_type = "application/json"
 
     elif path_only == "/api/test-telegram":
         try:
