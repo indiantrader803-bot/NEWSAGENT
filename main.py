@@ -5026,6 +5026,67 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/broadcast-indian-intel":
+        try:
+            exchange = query_params.get("exchange", ["NSE"])[0].upper()
+            if exchange not in ("NSE", "BSE"):
+                exchange = "NSE"
+                
+            import indian_scoring as iscoring
+            intel = iscoring.get_full_intel(exchange=exchange)
+            
+            # Format the Telegram report message
+            v = intel.get("verdict", {})
+            fii = intel.get("fii", {})
+            scan = intel.get("scan", [])
+            fno_days = intel.get("fno_days", 0)
+            
+            fii_net_val = fii.get("fii_net", 0.0)
+            dii_net_val = fii.get("dii_net", 0.0)
+            fii_status = fii.get("fii_status", "Neutral")
+            dii_status = fii.get("dii_status", "Neutral")
+            fii_date = fii.get("date", "Today")
+            
+            scan_lines = []
+            for s in scan[:5]:
+                change_sign = "+" if s.get("change_pct", 0.0) >= 0 else ""
+                scan_lines.append(
+                    f"• <b>{s['ticker']}</b> ({s['sector']}): <b>₹{s['price']}</b> ({change_sign}{s['change_pct']}%) | RSI: {s['rsi']} | Rating: <b>{s['rating']}</b>"
+                )
+            stock_signals_text = "\n".join(scan_lines) if scan_lines else "No active signals."
+            
+            message = (
+                f"🇮🇳 <b>INDIAN MARKET INTELLIGENCE REPORT ({exchange})</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📊 <b>Market Verdict:</b> {v.get('emoji', '🟡')} <b>{v.get('verdict', 'NEUTRAL')}</b>\n"
+                f"📝 <b>Rationale:</b> {v.get('reason', '')}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"💰 <b>FII/DII Net Flows</b>\n"
+                f"🔹 FII Net: <b>₹{fii_net_val:,.2f} Cr</b> ({fii_status})\n"
+                f"🔸 DII Net: <b>₹{dii_net_val:,.2f} Cr</b> ({dii_status})\n"
+                f"📅 Flows Date: {fii_date}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"⚡ <b>Top Stock Scan Signals</b>\n"
+                f"{stock_signals_text}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🗓 <b>F&O Expiry Countdown</b>\n"
+                f"🚪 <b>{fno_days}</b> days until next monthly expiry.\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🤖 <i>Powered by FinRobot AI Agent</i>"
+            )
+            
+            from telegram import Bot
+            if BOT_TOKEN:
+                bot = Bot(token=BOT_TOKEN)
+                await broadcast(bot, message)
+                response_body = json.dumps({"success": True, "message": "Successfully broadcasted to Telegram!"})
+            else:
+                response_body = json.dumps({"error": "Telegram BOT_TOKEN is not configured."})
+                
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
     elif path_only == "/api/verdict":
         try:
             import indian_scoring as iscoring

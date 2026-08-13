@@ -1024,6 +1024,7 @@
                                 <option value="Telecom">Telecom</option>
                                 <option value="Infra">Infra</option>
                             </select>
+                            <button class="btn-analyze" id="intel-broadcast-btn" onclick="broadcastIndianIntel()" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: 700;">📢 Broadcast to Telegram</button>
                         </div>
                     </div>
                     <div class="table-container">
@@ -1991,6 +1992,30 @@
 
         function filterSector() {
             renderScannerTable();
+        }
+
+        async function broadcastIndianIntel() {
+            const btn = document.getElementById("intel-broadcast-btn");
+            const exchange = document.getElementById("intel-exchange-select").value || "NSE";
+            
+            btn.disabled = true;
+            btn.innerText = "⏳ Broadcasting...";
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/broadcast-indian-intel?exchange=${exchange}`);
+                const data = await res.json();
+                if (data.success) {
+                    alert("📢 " + data.message);
+                } else {
+                    alert("⚠️ " + (data.error || "Failed to broadcast."));
+                }
+            } catch(e) {
+                console.error("Broadcast failed:", e);
+                alert("⚠️ Connection failed.");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "📢 Broadcast to Telegram";
+            }
         }
 
         // ── Deep Analysis (Multi-Agent) ─────────────────────────────────────
