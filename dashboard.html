@@ -733,7 +733,9 @@
                 font-size: 0.78rem;
             }
             .status-badge {
-                display: none !important;
+                display: inline-flex !important;
+                padding: 0.25rem 0.6rem !important;
+                font-size: 0.7rem !important;
             }
 
             .main-content {
@@ -864,8 +866,18 @@
                 <option value="fr">🇫🇷 French</option>
             </select>
             <button class="theme-toggle" id="theme-btn">🌙 Dark Mode</button>
-            <div class="status-badge">
-                <span class="status-dot"></span> Active Engine
+            <div class="status-badge" id="uptime-container" style="
+                display: inline-flex; align-items: center; gap: 0.5rem;
+                background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
+                border-radius: 20px; padding: 0.4rem 0.9rem; font-size: 0.78rem; font-weight: 700;
+                color: #10b981; transition: all 300ms ease;
+            ">
+                <span class="status-dot" style="
+                    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+                    background: #10b981; box-shadow: 0 0 10px #10b981;
+                    animation: pulse 1.5s infinite;
+                "></span>
+                <span id="uptime-status-text">Live: 24/7 (Uptime: 0s)</span>
             </div>
         </header>
 
@@ -2217,6 +2229,37 @@
         setInterval(loadSignals, 10000);
         setInterval(loadCalendar, 60000);
         setInterval(loadNews, 30000);
+
+        async function updateUptimeLive() {
+            try {
+                const res = await fetch(`${API_BASE}/api/uptime`);
+                const data = await res.json();
+                if (data && data.uptime) {
+                    document.getElementById("uptime-status-text").innerText = `Live: 24/7 (Uptime: ${data.uptime})`;
+                    const dot = document.querySelector("#uptime-container .status-dot");
+                    if (dot) {
+                        dot.style.background = "#10b981";
+                        dot.style.boxShadow = "0 0 10px #10b981";
+                    }
+                    document.getElementById("uptime-container").style.color = "#10b981";
+                    document.getElementById("uptime-container").style.background = "rgba(16, 185, 129, 0.1)";
+                    document.getElementById("uptime-container").style.borderColor = "rgba(16, 185, 129, 0.2)";
+                }
+            } catch(e) {
+                console.warn("Uptime fetch failed:", e);
+                document.getElementById("uptime-status-text").innerText = `Offline`;
+                const dot = document.querySelector("#uptime-container .status-dot");
+                if (dot) {
+                    dot.style.background = "#ef4444";
+                    dot.style.boxShadow = "0 0 10px #ef4444";
+                }
+                document.getElementById("uptime-container").style.color = "#ef4444";
+                document.getElementById("uptime-container").style.background = "rgba(239, 68, 68, 0.1)";
+                document.getElementById("uptime-container").style.borderColor = "rgba(239, 68, 68, 0.2)";
+            }
+        }
+        updateUptimeLive();
+        setInterval(updateUptimeLive, 5000);
 
         // ── AI Chatbot Widget ───────────────────────────────────────────────
         (function() {

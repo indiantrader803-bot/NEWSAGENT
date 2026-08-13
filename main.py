@@ -1,5 +1,8 @@
 import asyncio
 import json
+import time
+
+START_TIME = time.time()
 import os
 import re
 from contextlib import contextmanager
@@ -5083,6 +5086,33 @@ async def handle_health_check(reader, writer):
             else:
                 response_body = json.dumps({"error": "Telegram BOT_TOKEN is not configured."})
                 
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/uptime":
+        try:
+            uptime_seconds = int(time.time() - START_TIME)
+            days = uptime_seconds // 86400
+            hours = (uptime_seconds % 86400) // 3600
+            minutes = (uptime_seconds % 3600) // 60
+            seconds = uptime_seconds % 60
+            
+            uptime_str = []
+            if days > 0:
+                uptime_str.append(f"{days}d")
+            if hours > 0:
+                uptime_str.append(f"{hours}h")
+            if minutes > 0:
+                uptime_str.append(f"{minutes}m")
+            uptime_str.append(f"{seconds}s")
+            
+            response_body = json.dumps({
+                "status": "online",
+                "uptime": " ".join(uptime_str),
+                "uptime_seconds": uptime_seconds,
+                "start_time": datetime.fromtimestamp(START_TIME).strftime("%Y-%m-%d %H:%M:%S")
+            })
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
