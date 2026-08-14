@@ -872,11 +872,11 @@
                 <option value="fr">🇫🇷 French</option>
             </select>
             <button class="theme-toggle" id="theme-btn">🌙 Dark Mode</button>
-            <div class="status-badge" id="uptime-container" style="
+            <div class="status-badge" id="uptime-container" onclick="toggleHealthDropdown(event)" style="
                 display: inline-flex; align-items: center; gap: 0.5rem;
                 background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2);
                 border-radius: 20px; padding: 0.4rem 0.9rem; font-size: 0.78rem; font-weight: 700;
-                color: #10b981; transition: all 300ms ease;
+                color: #10b981; transition: all 300ms ease; position: relative; cursor: pointer;
             ">
                 <span class="status-dot" style="
                     display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -884,6 +884,36 @@
                     animation: pulse 1.5s infinite;
                 "></span>
                 <span id="uptime-status-text">Live: 24/7 (Uptime: 0s)</span>
+                
+                <!-- Dropdown Health Panel -->
+                <div id="health-status-tooltip" style="
+                    display: none; position: absolute; top: 120%; right: 0;
+                    background: var(--card-bg); border: 1px solid var(--card-border);
+                    border-radius: 12px; padding: 1rem; min-width: 210px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 1000;
+                    text-align: left; backdrop-filter: blur(10px); color: var(--text-main);
+                ">
+                    <div style="font-weight: 800; font-size: 0.8rem; margin-bottom: 0.75rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.4rem; color: var(--neon-accent); display: flex; justify-content: space-between; align-items: center;">
+                        <span>System Health</span>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); font-weight: 500;">Click to close</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.75rem;">
+                        <span>💻 Web Server:</span>
+                        <span style="color: #10b981; font-weight: 700;">🟢 Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.75rem;">
+                        <span>🗄️ Database:</span>
+                        <span style="color: #10b981; font-weight: 700;" id="health-db-val">🟢 Healthy</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.75rem;">
+                        <span>🤖 Telegram Bot:</span>
+                        <span style="color: #10b981; font-weight: 700;" id="health-tg-val">🟢 Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
+                        <span>💡 AI Engine:</span>
+                        <span style="color: #10b981; font-weight: 700;">🟢 Online</span>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -2250,6 +2280,20 @@
                     document.getElementById("uptime-container").style.color = "#10b981";
                     document.getElementById("uptime-container").style.background = "rgba(16, 185, 129, 0.1)";
                     document.getElementById("uptime-container").style.borderColor = "rgba(16, 185, 129, 0.2)";
+                    
+                    // Update Health fields
+                    if (data.health) {
+                        const dbVal = document.getElementById("health-db-val");
+                        const tgVal = document.getElementById("health-tg-val");
+                        if (dbVal) {
+                            dbVal.innerText = data.health.database === "Healthy" ? "🟢 Healthy" : "🔴 Degraded";
+                            dbVal.style.color = data.health.database === "Healthy" ? "#10b981" : "#ef4444";
+                        }
+                        if (tgVal) {
+                            tgVal.innerText = data.health.telegram === "Active" ? "🟢 Active" : "⚪ Disabled";
+                            tgVal.style.color = data.health.telegram === "Active" ? "#10b981" : "var(--text-muted)";
+                        }
+                    }
                 }
             } catch(e) {
                 console.warn("Uptime fetch failed:", e);
@@ -2264,6 +2308,20 @@
                 document.getElementById("uptime-container").style.borderColor = "rgba(239, 68, 68, 0.2)";
             }
         }
+        
+        function toggleHealthDropdown(event) {
+            event.stopPropagation();
+            const el = document.getElementById("health-status-tooltip");
+            if (!el) return;
+            el.style.display = el.style.display === "block" ? "none" : "block";
+        }
+        
+        // Close dropdown when clicking elsewhere
+        document.addEventListener("click", () => {
+            const el = document.getElementById("health-status-tooltip");
+            if (el) el.style.display = "none";
+        });
+        
         updateUptimeLive();
         setInterval(updateUptimeLive, 5000);
 

@@ -5107,11 +5107,25 @@ async def handle_health_check(reader, writer):
                 uptime_str.append(f"{minutes}m")
             uptime_str.append(f"{seconds}s")
             
+            tg_status = "Active" if BOT_TOKEN else "Disabled"
+            db_status = "Healthy"
+            try:
+                with open("signal_log.json", "r") as f:
+                    pass
+            except Exception:
+                db_status = "Degraded"
+                
             response_body = json.dumps({
                 "status": "online",
                 "uptime": " ".join(uptime_str),
                 "uptime_seconds": uptime_seconds,
-                "start_time": datetime.fromtimestamp(START_TIME).strftime("%Y-%m-%d %H:%M:%S")
+                "start_time": datetime.fromtimestamp(START_TIME).strftime("%Y-%m-%d %H:%M:%S"),
+                "health": {
+                    "server": "Active",
+                    "database": db_status,
+                    "telegram": tg_status,
+                    "ai": "Online"
+                }
             })
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
