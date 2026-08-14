@@ -12,7 +12,13 @@
         const theme = localStorage.getItem("theme") || "dark";
         document.documentElement.setAttribute("data-theme", theme);
     </script>
-    <style>
+    <style>/* Adding transition for smoother theme switch */
+:root {
+  --transition-duration: 0.5s;
+}
+[data-theme] {
+  transition: background-color var(--transition-duration), color var(--transition-duration);
+}
         :root {
             --font-family: 'Inter', 'Outfit', sans-serif;
             /* Emil Kowalski animation tokens */
