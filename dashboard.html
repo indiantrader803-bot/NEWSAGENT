@@ -822,6 +822,9 @@
             <li class="nav-item" onclick="switchPage('page-finrobot', this)">
                 🤖 FinRobot Analyst
             </li>
+            <li class="nav-item" onclick="switchPage('page-options-agent', this); initOptionsAgent();">
+                📈 Options Agent
+            </li>
             <li class="nav-item" onclick="switchPage('page-tools', this)">
                 🛠️ Trading Toolkit
             </li>
@@ -1159,6 +1162,134 @@
                     </div>
 
                     <div id="finrobot-result"></div>
+                </div>
+            </div>
+
+            <!-- PAGE: Option Chain AI Analyst -->
+            <div class="page-panel" id="page-options-agent">
+                <div style="max-width: 800px; margin: 0 auto; width: 100%;">
+                    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">📈 Option Chain AI Analyst</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                        Analyzes real-time Call/Put option chains for NSE and BSE equities, computes the Put-Call Ratio (PCR), detects key Open Interest (OI) support/resistance barriers, and delivers daily options strategy suggestions with strict Risk-to-Reward boundaries.
+                    </p>
+                    
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
+                        <input type="text" class="txt-symbol" id="opt-symbol-input" placeholder="Enter Symbol (e.g. RELIANCE, TCS, SBIN)" style="flex: 1; min-width: 200px; padding: 0.75rem 1rem; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); font-weight: 600;" value="RELIANCE" />
+                        
+                        <select class="filter-input" id="opt-exchange-select" style="min-width: 110px; margin: 0;">
+                            <option value="NSE">NSE India</option>
+                            <option value="BSE">BSE India</option>
+                        </select>
+                        
+                        <button class="btn-analyze" onclick="loadOptionExpiries()" style="padding: 0.75rem 1.2rem; border-radius: 12px; font-weight: 700; background: rgba(99, 102, 241, 0.15); color: var(--neon-accent); border: 1px solid var(--neon-accent);">📅 Load Expiries</button>
+                        
+                        <select class="filter-input" id="opt-expiry-select" style="min-width: 140px; margin: 0; display: none;">
+                            <!-- Expiries dynamic list -->
+                        </select>
+                        
+                        <button class="btn-analyze" id="opt-analyze-btn" onclick="runOptionChainAnalysis()" style="padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; display: none;">🧠 Analyze Chain</button>
+                    </div>
+
+                    <!-- Progress Stepper -->
+                    <div id="opt-stepper" style="display:none; margin-bottom:1.5rem;">
+                        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                            <span id="step-opt-exp" class="deep-step">📅 Loading Expiries</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-opt-chain" class="deep-step">📊 Downloading Chain</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-opt-agent" class="deep-step">🧠 Options AI Agent</span>
+                            <span style="color:var(--text-muted);">→</span>
+                            <span id="step-opt-trade" class="deep-step">📋 Trade Setup</span>
+                        </div>
+                    </div>
+
+                    <!-- Analysis Output Container -->
+                    <div id="opt-result-container" style="display: none;">
+                        <!-- Top Summary Stats -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
+                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Spot Price</div>
+                                <div id="opt-spot-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px; color: var(--neon-accent);">—</div>
+                            </div>
+                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
+                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">ATM Strike</div>
+                                <div id="opt-atm-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px; color: var(--secondary-accent);">—</div>
+                            </div>
+                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
+                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Put-Call Ratio (PCR)</div>
+                                <div id="opt-pcr-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px;">—</div>
+                            </div>
+                        </div>
+
+                        <!-- Open Interest Tables -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                            <!-- Calls Table -->
+                            <div>
+                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--loss);"><span class="live-dot" style="background: var(--loss); box-shadow: 0 0 8px var(--loss);"></span> Top Calls OI (Resistance)</h4>
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Strike</th>
+                                                <th>Price ₹</th>
+                                                <th>OI (Contracts)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="opt-calls-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <!-- Puts Table -->
+                            <div>
+                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--gain);"><span class="live-dot" style="background: var(--gain); box-shadow: 0 0 8px var(--gain);"></span> Top Puts OI (Support)</h4>
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Strike</th>
+                                                <th>Price ₹</th>
+                                                <th>OI (Contracts)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="opt-puts-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Trade Card -->
+                        <div id="opt-trade-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 1.5rem 2rem; backdrop-filter: var(--glass-blur); margin-bottom: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem;">
+                                <h4 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: var(--neon-accent);"><span style="margin-right: 0.4rem;">🎯</span> Options AI Signal Recommendation</h4>
+                                <span id="opt-trade-action" style="padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 800; font-size: 0.78rem; text-transform: uppercase;">—</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Strike target</div>
+                                    <div id="opt-trade-target" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Premium entry</div>
+                                    <div id="opt-trade-entry" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px; color: var(--secondary-accent);">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Stop Loss</div>
+                                    <div id="opt-trade-sl" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px; color: var(--loss);">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Target 1 (1:5)</div>
+                                    <div id="opt-trade-tp1" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px; color: var(--gain);">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Target 2 (1:10)</div>
+                                    <div id="opt-trade-tp2" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px; color: var(--gain);">—</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); border-top: 1px solid var(--card-border); padding-top: 0.75rem;">
+                                <b>Trade Rationale:</b> <span id="opt-trade-rationale">—</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2245,6 +2376,180 @@
                 btn.disabled = false;
                 btn.textContent = 'Generate Report';
                 result.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:12px;padding:1.5rem;color:#ef4444;font-weight:600;">⚠️ Connection Failed: ${e}</div>`;
+            }
+        }
+
+        // ── Option Chain AI Analyst ──────────────────────────────────────────
+        let optionsLoaded = false;
+        
+        async function initOptionsAgent() {
+            if (!optionsLoaded) {
+                loadOptionExpiries();
+            }
+        }
+        
+        async function loadOptionExpiries() {
+            const symbol = document.getElementById("opt-symbol-input").value.trim();
+            const exchange = document.getElementById("opt-exchange-select").value || "NSE";
+            if (!symbol) {
+                alert("Please enter a stock symbol first.");
+                return;
+            }
+            
+            const expSelect = document.getElementById("opt-expiry-select");
+            const btnAnalyze = document.getElementById("opt-analyze-btn");
+            const stepper = document.getElementById("opt-stepper");
+            const stepExp = document.getElementById("step-opt-exp");
+            
+            stepper.style.display = "block";
+            stepExp.className = "deep-step active";
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/options-expiries?symbol=${encodeURIComponent(symbol)}&exchange=${exchange}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert("⚠️ " + data.error);
+                    stepper.style.display = "none";
+                    return;
+                }
+                
+                expSelect.innerHTML = "";
+                if (data.expiries && data.expiries.length > 0) {
+                    data.expiries.forEach(exp => {
+                        const opt = document.createElement("option");
+                        opt.value = exp;
+                        opt.innerText = exp;
+                        expSelect.appendChild(opt);
+                    });
+                    
+                    expSelect.style.display = "inline-block";
+                    btnAnalyze.style.display = "inline-block";
+                    stepExp.className = "deep-step done";
+                    optionsLoaded = true;
+                } else {
+                    alert("No expiries found for this ticker.");
+                    stepper.style.display = "none";
+                }
+            } catch(e) {
+                console.error("Expiries failed:", e);
+                alert("Failed to load options expiry dates.");
+                stepper.style.display = "none";
+            }
+        }
+        
+        async function runOptionChainAnalysis() {
+            const symbol = document.getElementById("opt-symbol-input").value.trim();
+            const exchange = document.getElementById("opt-exchange-select").value || "NSE";
+            const expiry = document.getElementById("opt-expiry-select").value;
+            
+            const stepper = document.getElementById("opt-stepper");
+            const btn = document.getElementById("opt-analyze-btn");
+            
+            const steps = ["step-opt-exp", "step-opt-chain", "step-opt-agent", "step-opt-trade"];
+            
+            stepper.style.display = "block";
+            btn.disabled = true;
+            btn.innerText = "⏳ Analyzing Option Chain...";
+            
+            // Set first step done, next active
+            document.getElementById("step-opt-exp").className = "deep-step done";
+            document.getElementById("step-opt-chain").className = "deep-step active";
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/options-analysis?symbol=${encodeURIComponent(symbol)}&exchange=${exchange}&expiry=${expiry}`);
+                const data = await res.json();
+                
+                btn.disabled = false;
+                btn.innerText = "🧠 Analyze Chain";
+                
+                if (data.error) {
+                    alert("⚠️ " + data.error);
+                    steps.forEach(s => document.getElementById(s).className = "deep-step");
+                    return;
+                }
+                
+                // Set steps done
+                document.getElementById("step-opt-chain").className = "deep-step done";
+                document.getElementById("step-opt-agent").className = "deep-step done";
+                document.getElementById("step-opt-trade").className = "deep-step done";
+                
+                // Show values
+                document.getElementById("opt-spot-val").innerText = "₹" + parseFloat(data.spot).toLocaleString('en-IN', {maximumFractionDigits:2});
+                document.getElementById("opt-atm-val").innerText = "₹" + parseFloat(data.atm_strike).toLocaleString('en-IN', {maximumFractionDigits:0});
+                
+                const pcrVal = document.getElementById("opt-pcr-val");
+                pcrVal.innerText = data.pcr;
+                if (data.pcr >= 1.0) {
+                    pcrVal.style.color = "var(--gain)";
+                } else if (data.pcr <= 0.7) {
+                    pcrVal.style.color = "var(--loss)";
+                } else {
+                    pcrVal.style.color = "var(--text-main)";
+                }
+                
+                // Load tables
+                const callsBody = document.getElementById("opt-calls-body");
+                callsBody.innerHTML = "";
+                if (data.top_calls && data.top_calls.length > 0) {
+                    data.top_calls.forEach(c => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td><b>₹${c.strike}</b></td>
+                            <td class="num">₹${c.price}</td>
+                            <td class="num">${c.oi.toLocaleString()}</td>
+                        `;
+                        callsBody.appendChild(tr);
+                    });
+                } else {
+                    callsBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No calls F&O data</td></tr>";
+                }
+                
+                const putsBody = document.getElementById("opt-puts-body");
+                putsBody.innerHTML = "";
+                if (data.top_puts && data.top_puts.length > 0) {
+                    data.top_puts.forEach(p => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td><b>₹${p.strike}</b></td>
+                            <td class="num">₹${p.price}</td>
+                            <td class="num">${p.oi.toLocaleString()}</td>
+                        `;
+                        putsBody.appendChild(tr);
+                    });
+                } else {
+                    putsBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No puts F&O data</td></tr>";
+                }
+                
+                // Update trade card
+                const action = data.trade.action || "HOLD";
+                const actBadge = document.getElementById("opt-trade-action");
+                actBadge.innerText = action;
+                if (action.includes("BUY CALL") || action.includes("BULL")) {
+                    actBadge.style.background = "rgba(0,200,83,0.15)";
+                    actBadge.style.color = "var(--gain)";
+                } else if (action.includes("BUY PUT") || action.includes("BEAR")) {
+                    actBadge.style.background = "rgba(255,61,61,0.15)";
+                    actBadge.style.color = "var(--loss)";
+                } else {
+                    actBadge.style.background = "rgba(99,102,241,0.12)";
+                    actBadge.style.color = "var(--neon-accent)";
+                }
+                
+                document.getElementById("opt-trade-target").innerText = data.trade.strike_target || "—";
+                document.getElementById("opt-trade-entry").innerText = "₹" + (data.trade.premium_entry || "—");
+                document.getElementById("opt-trade-sl").innerText = "₹" + (data.trade.sl || "—");
+                document.getElementById("opt-trade-tp1").innerText = "₹" + (data.trade.tp1 || "—");
+                document.getElementById("opt-trade-tp2").innerText = "₹" + (data.trade.tp2 || "—");
+                document.getElementById("opt-trade-rationale").innerText = data.trade.rationale || "—";
+                
+                document.getElementById("opt-result-container").style.display = "block";
+            } catch(e) {
+                console.error("Option analysis failed:", e);
+                alert("Option Chain analysis failed to execute.");
+                steps.forEach(s => document.getElementById(s).className = "deep-step");
+                btn.disabled = false;
+                btn.innerText = "🧠 Analyze Chain";
             }
         }
 

@@ -5142,6 +5142,133 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/options-expiries":
+        try:
+            symbol = query_params.get("symbol", [""])[0].strip()
+            exchange = query_params.get("exchange", ["NSE"])[0].strip().upper()
+            if not symbol:
+                response_body = json.dumps({"error": "symbol parameter is required"})
+            else:
+                suffix = ".NS" if exchange == "BSE" else ".NS" # yfinance NSE suffix is standard for liquid options
+                ticker_symbol = symbol.upper()
+                if not ticker_symbol.endswith(".NS") and not ticker_symbol.endswith(".BO"):
+                    ticker_symbol = f"{ticker_symbol}.NS" # NSE is standard for liquid option chains
+                
+                import yfinance as yf
+                tk = yf.Ticker(ticker_symbol)
+                expiries = list(tk.options)
+                response_body = json.dumps({"expiries": expiries})
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/options-analysis":
+        try:
+            symbol = query_params.get("symbol", [""])[0].strip()
+            exchange = query_params.get("exchange", ["NSE"])[0].strip().upper()
+            expiry = query_params.get("expiry", [""])[0].strip()
+            
+            if not symbol:
+                response_body = json.dumps({"error": "symbol parameter is required"})
+            else:
+                ticker_symbol = symbol.upper()
+                if not ticker_symbol.endswith(".NS") and not ticker_symbol.endswith(".BO"):
+                    ticker_symbol = f"{ticker_symbol}.NS"
+                
+                import yfinance as yf
+                tk = yf.Ticker(ticker_symbol)
+                hist = tk.history(period="2d")
+                if hist.empty:
+                    raise Exception(f"No price data found for {ticker_symbol}")
+                spot = float(hist["Close"].iloc[-1])
+                
+                expiries = list(tk.options)
+                if not expiries:
+                    raise Exception(f"No option chain data available for {ticker_symbol}")
+                
+                selected_expiry = expiry if expiry in expiries else expiries[0]
+                
+                chain = tk.option_chain(selected_expiry)
+                calls = chain.calls
+                puts = chain.puts
+                
+                if calls.empty and puts.empty:
+                    raise Exception(f"Option chain is empty for expiry {selected_expiry}")
+                
+                for df in [calls, puts]:
+                    if not df.empty:
+                        df["strike"] = df["strike"].astype(float)
+                        df["openInterest"] = df["openInterest"].fillna(0).astype(int)
+                        df["lastPrice"] = df["lastPrice"].astype(float)
+                
+                atm_strike = float(calls.loc[(calls["strike"] - spot).abs().idxmin(), "strike"]) if not calls.empty else spot
+                
+                call_oi_total = int(calls["openInterest"].sum()) if not calls.empty else 0
+                put_oi_total = int(puts["openInterest"].sum()) if not puts.empty else 0
+                pcr = put_oi_total / call_oi_total if call_oi_total > 0 else 0.0
+                
+                near_calls = calls[calls["strike"].between(spot * 0.9, spot * 1.1)] if not calls.empty else calls
+                near_puts = puts[puts["strike"].between(spot * 0.9, spot * 1.1)] if not puts.empty else puts
+                
+                top_calls = []
+                if not near_calls.empty:
+                    tc_sorted = near_calls.nlargest(3, "openInterest")
+                    for _, row in tc_sorted.iterrows():
+                        top_calls.append({
+                            "strike": float(row["strike"]),
+                            "price": float(row["lastPrice"]),
+                            "oi": int(row["openInterest"])
+                        })
+                
+                top_puts = []
+                if not near_puts.empty:
+                    tp_sorted = near_puts.nlargest(3, "openInterest")
+                    for _, row in tp_sorted.iterrows():
+                        top_puts.append({
+                            "strike": float(row["strike"]),
+                            "price": float(row["lastPrice"]),
+                            "oi": int(row["openInterest"])
+                        })
+                
+                prompt = (
+                    f"Perform a professional options chain analysis for the stock {ticker_symbol}.\n"
+                    f"Spot Price: {spot:.2f} | ATM Strike: {atm_strike:.2f} | Expiry: {selected_expiry}\n"
+                    f"Aggregate Put-Call Ratio (PCR): {pcr:.2f}\n"
+                    f"Top Call Open Interest levels: {top_calls}\n"
+                    f"Top Put Open Interest levels: {top_puts}\n\n"
+                    f"Generate a clear options trade recommendation. Output strictly a JSON object with these exact keys:\n"
+                    f"- 'action': e.g. 'BUY CALL', 'BUY PUT', 'NEUTRAL RANGE'\n"
+                    f"- 'strike_target': target option strike, e.g. '{atm_strike:.0f} CE' or '{atm_strike:.0f} PE'\n"
+                    f"- 'premium_entry': estimated premium entry price\n"
+                    f"- 'sl': stop loss premium price\n"
+                    f"- 'tp1': target 1 premium price (must represent exactly a 1:5 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                    f"- 'tp2': target 2 premium price (must represent exactly a 1:10 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                    f"- 'rationale': 2-sentence rationale detailing PCR and OI boundaries\n"
+                )
+                
+                raw_res = _analyzer_groq_chat(prompt, system_prompt="You are an elite quantitative derivatives analyst. Respond ONLY with valid JSON.", json_mode=True)
+                import re
+                match = re.search(r'\{.*\}', raw_res, re.DOTALL)
+                if match:
+                    ai_trade = json.loads(match.group())
+                else:
+                    raise Exception(f"Failed to parse AI options decision: {raw_res}")
+                
+                response_body = json.dumps({
+                    "symbol": symbol,
+                    "exchange": exchange,
+                    "expiry": selected_expiry,
+                    "spot": spot,
+                    "atm_strike": atm_strike,
+                    "pcr": round(pcr, 2),
+                    "top_calls": top_calls,
+                    "top_puts": top_puts,
+                    "trade": ai_trade
+                })
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
     elif path_only == "/api/deep-analyze":
         symbol = query_params.get("symbol", [""])[0].strip()
         symbol = normalize_ticker_symbol(symbol)
