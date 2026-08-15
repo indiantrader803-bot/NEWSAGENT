@@ -403,3 +403,111 @@ def get_full_intel(exchange: str = "NSE") -> dict[str, Any]:
     _intel_cache[exchange] = result
     _intel_cache_time[exchange] = now
     return result
+
+
+def scan_breakout_candidates(exchange: str = "NSE") -> list[dict[str, Any]]:
+    """Scan liquid stocks for 3-day consolidation ranges and volume breakout patterns,
+    then locate their most liquid near-ATM option contract."""
+    import yfinance as yf
+    import pandas as pd
+    import numpy as np
+    
+    candidates = []
+    suffix = ".NS" if exchange == "NSE" else ".BO"
+    tickers_to_scan = NIFTY100_TICKERS[:15] # scan top 15 tickers for speed
+    
+    for ticker in tickers_to_scan:
+        ticker_symbol = f"{ticker}{suffix}"
+        try:
+            tk = yf.Ticker(ticker_symbol)
+            # Fetch 5 days of 1-hour candles
+            df = tk.history(period="5d", interval="1h")
+            if df.empty or len(df) < 20:
+                continue
+                
+            # Use first 3 days for consolidation analysis
+            # In a 5-day hourly dataset, first 3 days is approx the first 21 rows
+            consolidation_df = df.iloc[:21]
+            
+            c_min = float(consolidation_df["Close"].min())
+            c_max = float(consolidation_df["Close"].max())
+            c_mean = float(consolidation_df["Close"].mean())
+            c_range_pct = ((c_max - c_min) / c_mean) * 100
+            
+            is_consolidating = c_range_pct < 3.0 # Price range within 3%
+            
+            # Current price and volume
+            current_price = float(df["Close"].iloc[-1])
+            avg_volume = float(df["Volume"].iloc[-10:-1].mean())
+            current_volume = float(df["Volume"].iloc[-1])
+            volume_ratio = current_volume / avg_volume if avg_volume > 0 else 1.0
+            
+            status = "CONSOLIDATING"
+            breakout_type = None
+            
+            if is_consolidating:
+                if current_price > c_max and volume_ratio > 1.2:
+                    status = "PUMP BREAKOUT"
+                    breakout_type = "CALL"
+                elif current_price < c_min and volume_ratio > 1.2:
+                    status = "DUMP BREAKOUT"
+                    breakout_type = "PUT"
+            else:
+                # Early breakout check even if range was slightly wider
+                if current_price > c_max * 1.005 and volume_ratio > 1.5:
+                    status = "PUMP BREAKOUT"
+                    breakout_type = "CALL"
+                elif current_price < c_min * 0.995 and volume_ratio > 1.5:
+                    status = "DUMP BREAKOUT"
+                    breakout_type = "PUT"
+            
+            # Options Liquidity Grabber
+            option_contract = "—"
+            option_premium = 0.0
+            option_oi = 0
+            option_vol = 0
+            
+            if breakout_type and tk.options:
+                try:
+                    expiry = tk.options[0] # near month
+                    chain = tk.option_chain(expiry)
+                    options_df = chain.calls if breakout_type == "CALL" else chain.puts
+                    
+                    if not options_df.empty:
+                        # Convert column types
+                        options_df["strike"] = options_df["strike"].astype(float)
+                        options_df["volume"] = options_df["volume"].fillna(0).astype(int)
+                        options_df["openInterest"] = options_df["openInterest"].fillna(0).astype(int)
+                        options_df["lastPrice"] = options_df["lastPrice"].astype(float)
+                        
+                        # Filter strikes near ATM (within 5% of spot)
+                        near_options = options_df[options_df["strike"].between(current_price * 0.95, current_price * 1.05)]
+                        if near_options.empty:
+                            near_options = options_df
+                            
+                        # Find option contract with the highest Volume
+                        best_opt = near_options.nlargest(1, "volume").iloc[0]
+                        option_contract = f"{ticker} {expiry} {best_opt['strike']:.0f} {breakout_type}"
+                        option_premium = float(best_opt["lastPrice"])
+                        option_oi = int(best_opt["openInterest"])
+                        option_vol = int(best_opt["volume"])
+                except Exception as opt_err:
+                    print(f"Option grab failed for {ticker_symbol}: {opt_err}")
+            
+            candidates.append({
+                "ticker": ticker,
+                "sector": SECTOR_MAP.get(ticker, "Other"),
+                "price": round(current_price, 2),
+                "range_pct": round(c_range_pct, 2),
+                "volume_ratio": round(volume_ratio, 2),
+                "status": status,
+                "option_contract": option_contract,
+                "option_premium": option_premium,
+                "option_oi": option_oi,
+                "option_vol": option_vol
+            })
+        except Exception as e:
+            print(f"Breakout scan failed for {ticker_symbol}: {e}")
+            
+    return candidates
+

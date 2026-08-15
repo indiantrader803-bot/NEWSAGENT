@@ -1166,110 +1166,70 @@
             </div>
 
             <!-- PAGE: Option Chain AI Analyst -->
+            <!-- PAGE: Intraday Breakout & Option Liquidity Analyst -->
             <div class="page-panel" id="page-options-agent">
-                <div style="max-width: 800px; margin: 0 auto; width: 100%;">
-                    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">📈 Option Chain AI Analyst</h2>
+                <div style="max-width: 820px; margin: 0 auto; width: 100%;">
+                    <h2 style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">📊 Intraday Breakout & Options Agent</h2>
                     <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
-                        Analyzes real-time Call/Put option chains for NSE and BSE equities, computes the Put-Call Ratio (PCR), detects key Open Interest (OI) support/resistance barriers, and delivers daily options strategy suggestions with strict Risk-to-Reward boundaries.
+                        Scans F&O stocks showing 2-3 days of consolidation, detects intraday pump/dump volume breakouts, pulls the live option chain to target the contract with the highest volume (maximum liquidity), and generates premium trade suggestions.
                     </p>
                     
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
-                        <input type="text" class="txt-symbol" id="opt-symbol-input" placeholder="Enter Symbol (e.g. RELIANCE, TCS, SBIN)" style="flex: 1; min-width: 200px; padding: 0.75rem 1rem; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main); font-weight: 600;" value="RELIANCE" />
-                        
-                        <select class="filter-input" id="opt-exchange-select" style="min-width: 110px; margin: 0;">
+                        <select class="filter-input" id="opt-exchange-select" style="min-width: 130px; margin: 0;">
                             <option value="NSE">NSE India</option>
                             <option value="BSE">BSE India</option>
                         </select>
                         
-                        <button class="btn-analyze" onclick="loadOptionExpiries()" style="padding: 0.75rem 1.2rem; border-radius: 12px; font-weight: 700; background: rgba(99, 102, 241, 0.15); color: var(--neon-accent); border: 1px solid var(--neon-accent);">📅 Load Expiries</button>
-                        
-                        <select class="filter-input" id="opt-expiry-select" style="min-width: 140px; margin: 0; display: none;">
-                            <!-- Expiries dynamic list -->
-                        </select>
-                        
-                        <button class="btn-analyze" id="opt-analyze-btn" onclick="runOptionChainAnalysis()" style="padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; display: none;">🧠 Analyze Chain</button>
+                        <button class="btn-analyze" id="opt-scan-btn" onclick="scanBreakoutStocks()" style="padding: 0.75rem 1.5rem; border-radius: 12px; font-weight: 700; background: var(--neon-accent); color: white;">⚡ Scan Breakout Candidates</button>
                     </div>
 
                     <!-- Progress Stepper -->
                     <div id="opt-stepper" style="display:none; margin-bottom:1.5rem;">
                         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                            <span id="step-opt-exp" class="deep-step">📅 Loading Expiries</span>
+                            <span id="step-opt-scan" class="deep-step">🔍 Scanning Consolidation</span>
                             <span style="color:var(--text-muted);">→</span>
-                            <span id="step-opt-chain" class="deep-step">📊 Downloading Chain</span>
+                            <span id="step-opt-liquidity" class="deep-step">📊 Filtering Highest Liquidity</span>
                             <span style="color:var(--text-muted);">→</span>
-                            <span id="step-opt-agent" class="deep-step">🧠 Options AI Agent</span>
-                            <span style="color:var(--text-muted);">→</span>
-                            <span id="step-opt-trade" class="deep-step">📋 Trade Setup</span>
+                            <span id="step-opt-agent" class="deep-step">🧠 AI Breakout Analyst</span>
+                        </div>
+                    </div>
+
+                    <!-- Scanned Candidates Table -->
+                    <div id="opt-scanner-container" style="display: none; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--neon-accent);"><span class="live-dot"></span> Breakout Scanner Results (Top 15 F&O)</h4>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Ticker</th>
+                                        <th>Spot Price</th>
+                                        <th>3D Range</th>
+                                        <th>Volume Volatility</th>
+                                        <th>Breakout Status</th>
+                                        <th>Most Liquid Option</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="opt-scanner-body"></tbody>
+                            </table>
                         </div>
                     </div>
 
                     <!-- Analysis Output Container -->
                     <div id="opt-result-container" style="display: none;">
-                        <!-- Top Summary Stats -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
-                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Spot Price</div>
-                                <div id="opt-spot-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px; color: var(--neon-accent);">—</div>
-                            </div>
-                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
-                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">ATM Strike</div>
-                                <div id="opt-atm-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px; color: var(--secondary-accent);">—</div>
-                            </div>
-                            <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem; text-align: center; backdrop-filter: var(--glass-blur);">
-                                <div style="font-size: 0.72rem; text-transform: uppercase; color: var(--text-muted);">Put-Call Ratio (PCR)</div>
-                                <div id="opt-pcr-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px;">—</div>
-                            </div>
-                        </div>
-
-                        <!-- Open Interest Tables -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-                            <!-- Calls Table -->
-                            <div>
-                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--loss);"><span class="live-dot" style="background: var(--loss); box-shadow: 0 0 8px var(--loss);"></span> Top Calls OI (Resistance)</h4>
-                                <div class="table-container">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Strike</th>
-                                                <th>Price ₹</th>
-                                                <th>OI (Contracts)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="opt-calls-body"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            <!-- Puts Table -->
-                            <div>
-                                <h4 style="font-size: 0.9rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--gain);"><span class="live-dot" style="background: var(--gain); box-shadow: 0 0 8px var(--gain);"></span> Top Puts OI (Support)</h4>
-                                <div class="table-container">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Strike</th>
-                                                <th>Price ₹</th>
-                                                <th>OI (Contracts)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="opt-puts-body"></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- AI Trade Card -->
                         <div id="opt-trade-card" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 18px; padding: 1.5rem 2rem; backdrop-filter: var(--glass-blur); margin-bottom: 1.5rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem;">
-                                <h4 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: var(--neon-accent);"><span style="margin-right: 0.4rem;">🎯</span> Options AI Signal Recommendation</h4>
+                                <h4 style="font-size: 1.1rem; font-weight: 800; margin: 0; color: var(--neon-accent);"><span style="margin-right: 0.4rem;">🎯</span> Options AI Breakout Signal</h4>
                                 <span id="opt-trade-action" style="padding: 0.3rem 0.8rem; border-radius: 20px; font-weight: 800; font-size: 0.78rem; text-transform: uppercase;">—</span>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                                 <div>
-                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Strike target</div>
-                                    <div id="opt-trade-target" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px;">—</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Liquid Option Target</div>
+                                    <div id="opt-trade-target" style="font-size: 1.05rem; font-weight: 700; margin-top: 2px;">—</div>
                                 </div>
                                 <div>
-                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Premium entry</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-muted);">Premium Entry</div>
                                     <div id="opt-trade-entry" style="font-size: 1.1rem; font-weight: 700; margin-top: 2px; color: var(--secondary-accent);">—</div>
                                 </div>
                                 <div>
@@ -2379,152 +2339,125 @@
             }
         }
 
-        // ── Option Chain AI Analyst ──────────────────────────────────────────
-        let optionsLoaded = false;
+        // ── Intraday Breakout & Options Agent ───────────────────────────────
+        let breakoutScanDone = false;
         
         async function initOptionsAgent() {
-            if (!optionsLoaded) {
-                loadOptionExpiries();
+            if (!breakoutScanDone) {
+                scanBreakoutStocks();
             }
         }
         
-        async function loadOptionExpiries() {
-            const symbol = document.getElementById("opt-symbol-input").value.trim();
+        async function scanBreakoutStocks() {
             const exchange = document.getElementById("opt-exchange-select").value || "NSE";
-            if (!symbol) {
-                alert("Please enter a stock symbol first.");
-                return;
-            }
-            
-            const expSelect = document.getElementById("opt-expiry-select");
-            const btnAnalyze = document.getElementById("opt-analyze-btn");
+            const btn = document.getElementById("opt-scan-btn");
             const stepper = document.getElementById("opt-stepper");
-            const stepExp = document.getElementById("step-opt-exp");
             
-            stepper.style.display = "block";
-            stepExp.className = "deep-step active";
-            
-            try {
-                const res = await fetch(`${API_BASE}/api/options-expiries?symbol=${encodeURIComponent(symbol)}&exchange=${exchange}`);
-                const data = await res.json();
-                
-                if (data.error) {
-                    alert("⚠️ " + data.error);
-                    stepper.style.display = "none";
-                    return;
-                }
-                
-                expSelect.innerHTML = "";
-                if (data.expiries && data.expiries.length > 0) {
-                    data.expiries.forEach(exp => {
-                        const opt = document.createElement("option");
-                        opt.value = exp;
-                        opt.innerText = exp;
-                        expSelect.appendChild(opt);
-                    });
-                    
-                    expSelect.style.display = "inline-block";
-                    btnAnalyze.style.display = "inline-block";
-                    stepExp.className = "deep-step done";
-                    optionsLoaded = true;
-                } else {
-                    alert("No expiries found for this ticker.");
-                    stepper.style.display = "none";
-                }
-            } catch(e) {
-                console.error("Expiries failed:", e);
-                alert("Failed to load options expiry dates.");
-                stepper.style.display = "none";
-            }
-        }
-        
-        async function runOptionChainAnalysis() {
-            const symbol = document.getElementById("opt-symbol-input").value.trim();
-            const exchange = document.getElementById("opt-exchange-select").value || "NSE";
-            const expiry = document.getElementById("opt-expiry-select").value;
-            
-            const stepper = document.getElementById("opt-stepper");
-            const btn = document.getElementById("opt-analyze-btn");
-            
-            const steps = ["step-opt-exp", "step-opt-chain", "step-opt-agent", "step-opt-trade"];
-            
-            stepper.style.display = "block";
             btn.disabled = true;
-            btn.innerText = "⏳ Analyzing Option Chain...";
-            
-            // Set first step done, next active
-            document.getElementById("step-opt-exp").className = "deep-step done";
-            document.getElementById("step-opt-chain").className = "deep-step active";
+            btn.innerText = "⏳ Scanning F&O Universe...";
+            stepper.style.display = "block";
+            document.getElementById("step-opt-scan").className = "deep-step active";
+            document.getElementById("step-opt-liquidity").className = "deep-step";
+            document.getElementById("step-opt-agent").className = "deep-step";
             
             try {
-                const res = await fetch(`${API_BASE}/api/options-analysis?symbol=${encodeURIComponent(symbol)}&exchange=${exchange}&expiry=${expiry}`);
+                const res = await fetch(`${API_BASE}/api/breakout-scanner?exchange=${exchange}`);
                 const data = await res.json();
                 
                 btn.disabled = false;
-                btn.innerText = "🧠 Analyze Chain";
+                btn.innerText = "⚡ Scan Breakout Candidates";
                 
                 if (data.error) {
                     alert("⚠️ " + data.error);
-                    steps.forEach(s => document.getElementById(s).className = "deep-step");
+                    stepper.style.display = "none";
                     return;
                 }
                 
-                // Set steps done
-                document.getElementById("step-opt-chain").className = "deep-step done";
-                document.getElementById("step-opt-agent").className = "deep-step done";
-                document.getElementById("step-opt-trade").className = "deep-step done";
+                document.getElementById("step-opt-scan").className = "deep-step done";
+                document.getElementById("step-opt-liquidity").className = "deep-step active";
                 
-                // Show values
-                document.getElementById("opt-spot-val").innerText = "₹" + parseFloat(data.spot).toLocaleString('en-IN', {maximumFractionDigits:2});
-                document.getElementById("opt-atm-val").innerText = "₹" + parseFloat(data.atm_strike).toLocaleString('en-IN', {maximumFractionDigits:0});
+                const tbody = document.getElementById("opt-scanner-body");
+                tbody.innerHTML = "";
                 
-                const pcrVal = document.getElementById("opt-pcr-val");
-                pcrVal.innerText = data.pcr;
-                if (data.pcr >= 1.0) {
-                    pcrVal.style.color = "var(--gain)";
-                } else if (data.pcr <= 0.7) {
-                    pcrVal.style.color = "var(--loss)";
-                } else {
-                    pcrVal.style.color = "var(--text-main)";
-                }
-                
-                // Load tables
-                const callsBody = document.getElementById("opt-calls-body");
-                callsBody.innerHTML = "";
-                if (data.top_calls && data.top_calls.length > 0) {
-                    data.top_calls.forEach(c => {
+                if (data.candidates && data.candidates.length > 0) {
+                    data.candidates.forEach(c => {
                         const tr = document.createElement("tr");
+                        
+                        // Status badge colors
+                        let statusColor = "var(--text-muted)";
+                        let statusBg = "rgba(255,255,255,0.05)";
+                        if (c.status.includes("PUMP")) {
+                            statusColor = "var(--gain)";
+                            statusBg = "rgba(0,200,83,0.12)";
+                        } else if (c.status.includes("DUMP")) {
+                            statusColor = "var(--loss)";
+                            statusBg = "rgba(255,61,61,0.12)";
+                        }
+                        
+                        // Option Details
+                        const optText = c.option_contract !== "—" 
+                            ? `<b>${c.option_contract.split(' ').slice(2).join(' ')}</b><br/><span style='font-size:0.72rem;color:var(--text-muted);'>Premium: ₹${c.option_premium} | Vol: ${c.option_vol.toLocaleString()}</span>`
+                            : "—";
+                        
+                        // Action button only if status has breakout
+                        const hasBreakout = c.status.includes("BREAKOUT") && c.option_contract !== "—";
+                        const actionHtml = hasBreakout 
+                            ? `<button class="btn-analyze" onclick="analyzeBreakoutStock('${c.ticker}', '${c.status}', '${c.option_contract}', ${c.option_premium})" style="padding:0.4rem 0.8rem; font-size:0.75rem; border-radius:8px;">🧠 Options AI</button>`
+                            : `<span style='color:var(--text-muted); font-size:0.75rem;'>No Breakout</span>`;
+                        
                         tr.innerHTML = `
-                            <td><b>₹${c.strike}</b></td>
+                            <td><b>${c.ticker}</b><br/><span style='font-size:0.72rem;color:var(--text-muted);'>${c.sector}</span></td>
                             <td class="num">₹${c.price}</td>
-                            <td class="num">${c.oi.toLocaleString()}</td>
+                            <td class="num">${c.range_pct}%</td>
+                            <td class="num" style="color: ${c.volume_ratio >= 1.5 ? 'var(--secondary-accent)' : 'var(--text-muted)'}">${c.volume_ratio}x</td>
+                            <td><span style="padding:0.25rem 0.6rem; border-radius:12px; font-weight:800; font-size:0.7rem; background:${statusBg}; color:${statusColor}; text-transform:uppercase;">${c.status.replace(" BREAKOUT", "")}</span></td>
+                            <td>${optText}</td>
+                            <td>${actionHtml}</td>
                         `;
-                        callsBody.appendChild(tr);
+                        tbody.appendChild(tr);
                     });
+                    
+                    document.getElementById("opt-scanner-container").style.display = "block";
+                    document.getElementById("step-opt-liquidity").className = "deep-step done";
+                    breakoutScanDone = true;
                 } else {
-                    callsBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No calls F&O data</td></tr>";
+                    tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>No candidates matched scanning criteria</td></tr>";
+                    stepper.style.display = "none";
+                }
+            } catch(e) {
+                console.error("Scanner failed:", e);
+                alert("Failed to scan breakout candidates.");
+                stepper.style.display = "none";
+                btn.disabled = false;
+                btn.innerText = "⚡ Scan Breakout Candidates";
+            }
+        }
+        
+        async function analyzeBreakoutStock(ticker, status, optContract, optPremium) {
+            const exchange = document.getElementById("opt-exchange-select").value || "NSE";
+            const stepper = document.getElementById("opt-stepper");
+            
+            stepper.style.display = "block";
+            document.getElementById("step-opt-liquidity").className = "deep-step done";
+            document.getElementById("step-opt-agent").className = "deep-step active";
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/breakout-analyze?ticker=${ticker}&exchange=${exchange}&status=${encodeURIComponent(status)}&option_contract=${encodeURIComponent(optContract)}&option_premium=${optPremium}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    alert("⚠️ " + data.error);
+                    document.getElementById("step-opt-agent").className = "deep-step";
+                    return;
                 }
                 
-                const putsBody = document.getElementById("opt-puts-body");
-                putsBody.innerHTML = "";
-                if (data.top_puts && data.top_puts.length > 0) {
-                    data.top_puts.forEach(p => {
-                        const tr = document.createElement("tr");
-                        tr.innerHTML = `
-                            <td><b>₹${p.strike}</b></td>
-                            <td class="num">₹${p.price}</td>
-                            <td class="num">${p.oi.toLocaleString()}</td>
-                        `;
-                        putsBody.appendChild(tr);
-                    });
-                } else {
-                    putsBody.innerHTML = "<tr><td colspan='3' style='text-align:center;'>No puts F&O data</td></tr>";
-                }
+                document.getElementById("step-opt-agent").className = "deep-step done";
                 
-                // Update trade card
+                // Update Recommendation Card
                 const action = data.trade.action || "HOLD";
                 const actBadge = document.getElementById("opt-trade-action");
                 actBadge.innerText = action;
+                
                 if (action.includes("BUY CALL") || action.includes("BULL")) {
                     actBadge.style.background = "rgba(0,200,83,0.15)";
                     actBadge.style.color = "var(--gain)";
@@ -2536,7 +2469,13 @@
                     actBadge.style.color = "var(--neon-accent)";
                 }
                 
-                document.getElementById("opt-trade-target").innerText = data.trade.strike_target || "—";
+                // Parse option strike description for readability
+                const strikeParts = data.option_contract.split(" ");
+                const expiryText = strikeParts[1] || "";
+                const strikeVal = strikeParts[2] || "";
+                const typeText = strikeParts[3] || "";
+                
+                document.getElementById("opt-trade-target").innerHTML = `<b>${ticker}</b> ${expiryText}<br/><b>${strikeVal} ${typeText}</b>`;
                 document.getElementById("opt-trade-entry").innerText = "₹" + (data.trade.premium_entry || "—");
                 document.getElementById("opt-trade-sl").innerText = "₹" + (data.trade.sl || "—");
                 document.getElementById("opt-trade-tp1").innerText = "₹" + (data.trade.tp1 || "—");
@@ -2544,12 +2483,13 @@
                 document.getElementById("opt-trade-rationale").innerText = data.trade.rationale || "—";
                 
                 document.getElementById("opt-result-container").style.display = "block";
+                
+                // Scroll to result view
+                document.getElementById("opt-result-container").scrollIntoView({ behavior: 'smooth' });
             } catch(e) {
-                console.error("Option analysis failed:", e);
-                alert("Option Chain analysis failed to execute.");
-                steps.forEach(s => document.getElementById(s).className = "deep-step");
-                btn.disabled = false;
-                btn.innerText = "🧠 Analyze Chain";
+                console.error("AI Breakout analysis failed:", e);
+                alert("Failed to analyze breakout options.");
+                document.getElementById("step-opt-agent").className = "deep-step";
             }
         }
 

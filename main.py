@@ -5269,6 +5269,64 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/breakout-scanner":
+        try:
+            exchange = query_params.get("exchange", ["NSE"])[0].strip().upper()
+            if exchange not in ("NSE", "BSE"):
+                exchange = "NSE"
+            import indian_scoring as iscoring
+            candidates = iscoring.scan_breakout_candidates(exchange=exchange)
+            response_body = json.dumps({"candidates": candidates})
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/breakout-analyze":
+        try:
+            ticker = query_params.get("ticker", [""])[0].strip().upper()
+            exchange = query_params.get("exchange", ["NSE"])[0].strip().upper()
+            status = query_params.get("status", [""])[0].strip()
+            option_contract = query_params.get("option_contract", [""])[0].strip()
+            option_premium = query_params.get("option_premium", ["0.0"])[0].strip()
+            
+            if not ticker or not status:
+                raise Exception("ticker and status parameters are required")
+                
+            prompt = (
+                f"Analyze this intraday breakout stock setup:\n"
+                f"Stock Ticker: {ticker} ({exchange})\n"
+                f"Breakout Status: {status}\n"
+                f"Most Liquid Option Contract: {option_contract}\n"
+                f"Option Last Premium Price: ₹{option_premium}\n\n"
+                f"Generate a professional options trade recommendation. Output strictly a JSON object with these exact keys:\n"
+                f"- 'action': e.g. 'BUY CALL', 'BUY PUT'\n"
+                f"- 'strike_target': option contract name, e.g. '{option_contract}'\n"
+                f"- 'premium_entry': option premium entry price, e.g. {option_premium}\n"
+                f"- 'sl': stop loss premium price\n"
+                f"- 'tp1': target 1 premium price (must represent exactly a 1:5 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                f"- 'tp2': target 2 premium price (must represent exactly a 1:10 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                f"- 'rationale': 2-sentence rationale detailing why the breakout from the 3-day consolidation pattern supports this trade.\n"
+            )
+            
+            raw_res = _analyzer_groq_chat(prompt, system_prompt="You are an elite quantitative derivatives analyst. Respond ONLY with valid JSON.", json_mode=True)
+            import re
+            match = re.search(r'\{.*\}', raw_res, re.DOTALL)
+            if match:
+                ai_trade = json.loads(match.group())
+            else:
+                raise Exception(f"Failed to parse AI options decision: {raw_res}")
+                
+            response_body = json.dumps({
+                "ticker": ticker,
+                "exchange": exchange,
+                "status": status,
+                "option_contract": option_contract,
+                "trade": ai_trade
+            })
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
     elif path_only == "/api/deep-analyze":
         symbol = query_params.get("symbol", [""])[0].strip()
         symbol = normalize_ticker_symbol(symbol)
