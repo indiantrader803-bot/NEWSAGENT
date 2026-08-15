@@ -13,7 +13,7 @@
         document.documentElement.setAttribute("data-theme", theme);
     </script>
     <style>/* Adding transition for smoother theme switch */
-:root {
+:root { --animation-duration: 0.3s; --hover-transition: all 0.2s ease-out;
   --transition-duration: 0.5s;
 }
 [data-theme] {
