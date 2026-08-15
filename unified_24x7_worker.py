@@ -231,6 +231,92 @@ async def monitor_indian_market(bot: Bot):
         try:
             sessions = get_current_market_session()
             
+            # Pre-Market Options Breakout Report (at 9:00 - 9:15 AM IST)
+            ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+            if ist_now.weekday() < 5 and ist_now.hour == 9 and 0 <= ist_now.minute <= 15:
+                if state.can_send_message("indian_premarket_breakout", 80000): # at most once a day
+                    try:
+                        print("[INDIAN] Running pre-market options breakout scan...")
+                        import indian_scoring as iscoring
+                        candidates = iscoring.scan_breakout_candidates(exchange="NSE")
+                        
+                        # Find the top candidate that has a breakout status
+                        breakout_c = None
+                        for c in candidates:
+                            if c.get("status") in ("PUMP BREAKOUT", "DUMP BREAKOUT") and c.get("option_contract") != "—":
+                                breakout_c = c
+                                break
+                        
+                        # If no breakout, pick the one with the tightest consolidation range as a pre-market watch
+                        if not breakout_c and candidates:
+                            candidates_sorted = sorted(candidates, key=lambda x: x.get("range_pct", 99.0))
+                            breakout_c = candidates_sorted[0]
+                            
+                        if breakout_c:
+                            ticker = breakout_c["ticker"]
+                            status = breakout_c["status"]
+                            option_contract = breakout_c["option_contract"]
+                            option_premium = breakout_c["option_premium"]
+                            spot = breakout_c["price"]
+                            range_pct = breakout_c["range_pct"]
+                            volume_ratio = breakout_c["volume_ratio"]
+                            sector = breakout_c["sector"]
+                            
+                            # Analyze breakout using AI
+                            prompt = (
+                                f"Analyze this intraday breakout stock setup:\n"
+                                f"Stock Ticker: {ticker} (NSE)\n"
+                                f"Breakout Status: {status}\n"
+                                f"Most Liquid Option Contract: {option_contract}\n"
+                                f"Option Last Premium Price: ₹{option_premium}\n\n"
+                                f"Generate a professional options trade recommendation. Output strictly a JSON object with these exact keys:\n"
+                                f"- 'action': e.g. 'BUY CALL', 'BUY PUT'\n"
+                                f"- 'strike_target': option contract name, e.g. '{option_contract}'\n"
+                                f"- 'premium_entry': option premium entry price, e.g. {option_premium}\n"
+                                f"- 'sl': stop loss premium price\n"
+                                f"- 'tp1': target 1 premium price (must represent exactly a 1:5 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                                f"- 'tp2': target 2 premium price (must represent exactly a 1:10 Risk-to-Reward ratio relative to entry and Stop Loss)\n"
+                                f"- 'rationale': 2-sentence rationale detailing why the breakout from the 3-day consolidation pattern supports this trade.\n"
+                            )
+                            
+                            raw_res = main._analyzer_groq_chat(prompt, system_prompt="You are an elite quantitative derivatives analyst. Respond ONLY with valid JSON.", json_mode=True)
+                            import re
+                            match = re.search(r'\{.*\}', raw_res, re.DOTALL)
+                            if match:
+                                ai_trade = json.loads(match.group())
+                                action = ai_trade.get("action", "BUY CALL")
+                                entry = ai_trade.get("premium_entry", option_premium)
+                                sl = ai_trade.get("sl", "0.0")
+                                tp1 = ai_trade.get("tp1", "0.0")
+                                tp2 = ai_trade.get("tp2", "0.0")
+                                rationale = ai_trade.get("rationale", "")
+                                
+                                telegram_msg = (
+                                    f"🇮🇳 <b>PRE-MARKET F&O BREAKOUT OPTIONS ALERT</b>\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"📊 <b>Breakout Stock:</b> <b>{ticker}</b> ({sector})\n"
+                                    f"📈 Spot Price: <b>₹{spot:,.2f}</b>\n"
+                                    f"📉 3-Day Consolidation Range: <b>{range_pct}%</b>\n"
+                                    f"🔊 Volume Volatility: <b>{volume_ratio}x</b>\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"🎯 <b>Option Trade Recommendation</b>\n"
+                                    f"🔹 Action: <b>{action}</b>\n"
+                                    f"🔸 Option Contract: <b>{option_contract}</b>\n"
+                                    f"🔹 Entry Premium: <b>₹{entry}</b>\n"
+                                    f"🔸 Stop Loss: <b>₹{sl}</b>\n"
+                                    f"🔹 Target 1 (1:5 R:R): <b>₹{tp1}</b>\n"
+                                    f"🔸 Target 2 (1:10 R:R): <b>₹{tp2}</b>\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"📝 <b>Trade Rationale:</b> {rationale}\n"
+                                    f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                                    f"🤖 <i>Powered by Breakout Options Agent</i>"
+                                )
+                                await broadcast_message(bot, telegram_msg, parse_mode="HTML")
+                                state.record_message("indian_premarket_breakout")
+                                print(f"[INDIAN] Daily pre-market options breakout alert broadcasted for {ticker}")
+                    except Exception as pre_err:
+                        print(f"[INDIAN] Pre-market options alert broadcast failed: {pre_err}")
+
             if sessions["indian"] and state.can_send_message(category, 300):  # 5 min cooldown
                 # Fetch Indian market snapshot
                 snapshot = indian_market.format_market_snapshot()
