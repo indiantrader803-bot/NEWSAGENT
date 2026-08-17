@@ -359,6 +359,19 @@ async def monitor_indian_market(bot: Bot):
                     except Exception as open_err:
                         print(f"[INDIAN] Market Open options flags broadcast failed: {open_err}")
 
+            # Market Close Graded Flags Report (at 3:30 - 3:45 PM IST)
+            if ist_now.weekday() < 5 and ist_now.hour == 15 and 30 <= ist_now.minute <= 45:
+                if state.can_send_message("indian_market_close_flags", 80000): # at most once a day
+                    try:
+                        print("[INDIAN] Running Market Close graded flags report...")
+                        import indian_scoring as iscoring
+                        close_report = iscoring.format_graded_flags_telegram_message()
+                        await broadcast_message(bot, close_report, parse_mode="HTML")
+                        state.record_message("indian_market_close_flags")
+                        print("[INDIAN] Daily Market Close graded flags report broadcasted to Telegram")
+                    except Exception as close_err:
+                        print(f"[INDIAN] Market Close flags broadcast failed: {close_err}")
+
             if sessions["indian"] and state.can_send_message(category, 300):  # 5 min cooldown
                 # Fetch Indian market snapshot
                 snapshot = indian_market.format_market_snapshot()
