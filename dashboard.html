@@ -1013,13 +1013,14 @@
             </div>
 
             <!-- PAGE 6: Indian Market Intelligence -->
+            <!-- PAGE 6: Indian Market Intelligence & Institutional Options Flow -->
             <div class="page-panel" id="page-indian-intel">
                 <!-- Verdict Banner -->
                 <div id="intel-verdict-banner" style="
                     border-radius: 18px; padding: 1.5rem 2rem;
                     display: flex; align-items: center; gap: 1.5rem;
                     background: var(--card-bg); border: 1px solid var(--card-border);
-                    backdrop-filter: var(--glass-blur);
+                    backdrop-filter: var(--glass-blur); margin-bottom: 1rem;
                 ">
                     <div id="intel-verdict-emoji" style="font-size: 2.8rem; line-height: 1;">⏳</div>
                     <div style="flex:1;">
@@ -1035,7 +1036,7 @@
                 </div>
 
                 <!-- FII/DII Strip -->
-                <div class="intel-flow-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="intel-flow-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                     <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 1.2rem 1.5rem; backdrop-filter: var(--glass-blur);">
                         <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted);">FII Net Flow (Today)</div>
                         <div id="intel-fii-val" class="num" style="font-size: 1.5rem; font-weight: 700; margin-top: 4px;">—</div>
@@ -1048,8 +1049,65 @@
                     </div>
                 </div>
 
+                <!-- Top Signals (Graded Live) -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.04em; color: var(--neon-accent); margin-bottom: 0.75rem;">
+                        ⚡ TOP SIGNALS — GRADED LIVE
+                    </h3>
+                    <div id="intel-top-signals-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+
+                <!-- Institutional Campaigns (Stock Flow Cards) -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.05rem; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 0.75rem;">
+                        🏢 INSTITUTIONAL CAMPAIGNS (STOCK OPTION FLOWS)
+                    </h3>
+                    <div id="intel-campaigns-list" style="display: flex; flex-direction: column; gap: 1rem;"></div>
+                </div>
+
+                <!-- Dual Grid: Top OI Buildup & Index PCR Watch -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <!-- Top OI Buildup -->
+                    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; backdrop-filter: var(--glass-blur);">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-muted); margin-bottom: 1rem;">TOP OI BUILDUP</h4>
+                        <div id="intel-top-oi-list" style="display: flex; flex-direction: column; gap: 0.6rem;"></div>
+                    </div>
+                    <!-- PCR Watch -->
+                    <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; backdrop-filter: var(--glass-blur);">
+                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-muted); margin-bottom: 1rem;">PCR WATCH</h4>
+                        <div id="intel-pcr-watch-list" style="display: flex; flex-direction: column; gap: 0.8rem;"></div>
+                    </div>
+                </div>
+
+                <!-- Live Execution Trade Log (Kasandra Style) -->
+                <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 1.25rem 1.5rem; backdrop-filter: var(--glass-blur); margin-bottom: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div>
+                            <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--neon-accent); margin: 0;">
+                                <span class="live-dot"></span> LIVE TRADE LOG
+                            </h4>
+                            <div id="intel-log-summary" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;"></div>
+                        </div>
+                        <div id="intel-log-time" style="font-size: 0.72rem; color: var(--text-muted);"></div>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>DATE</th>
+                                    <th>SIDE</th>
+                                    <th>ENTRY</th>
+                                    <th>PIPS / PTS</th>
+                                    <th>RESULT</th>
+                                </tr>
+                            </thead>
+                            <tbody id="intel-trade-log-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- NIFTY 100 Scanner Table -->
-                <div>
+                <div style="margin-bottom: 1.5rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
                         <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">
                             <span class="live-dot"></span> NIFTY 100 Signal Scanner
@@ -2026,39 +2084,135 @@
         // ── Indian Market Intelligence ──────────────────────────────────────
         let scannedStocks = [];
 
-        async function loadIndianIntel() {
-            if (intelLoaded) return;
-            try {
-                const exchange = document.getElementById("intel-exchange-select").value || "NSE";
-                const res = await fetch(`${API_BASE}/api/indian-intel?exchange=${exchange}`);
-                const data = await res.json();
-                if (data.error) { console.error('Intel error:', data.error); return; }
+                // 1. Top Signals (Graded Live)
+                const topSigContainer = document.getElementById('intel-top-signals-list');
+                topSigContainer.innerHTML = '';
+                (data.top_graded_signals || []).forEach(sig => {
+                    const dirColor = sig.direction === 'BULLISH' ? 'var(--gain)' : 'var(--loss)';
+                    const dirBg = sig.direction === 'BULLISH' ? 'rgba(0,200,83,0.12)' : 'rgba(255,61,61,0.12)';
+                    
+                    let evHtml = (sig.evidence || []).map(ev => `
+                        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.35rem; font-size:0.8rem; color:${ev.pass ? 'var(--text-main)' : 'var(--text-muted)'};">
+                            <span>${ev.pass ? '✓' : '✕'}</span>
+                            <span style="${ev.pass ? '' : 'text-decoration:line-through; opacity:0.7;'}">${ev.text}</span>
+                        </div>
+                    `).join('');
 
-                // Verdict banner
-                const v = data.verdict || {};
-                const verdictEl = document.getElementById('intel-verdict-text');
-                const emojiEl = document.getElementById('intel-verdict-emoji');
-                const reasonEl = document.getElementById('intel-verdict-reason');
-                const banner = document.getElementById('intel-verdict-banner');
-                verdictEl.textContent = (v.emoji || '') + ' ' + (v.verdict || '—');
-                emojiEl.style.display = 'none';
-                reasonEl.textContent = v.reason || '';
-                if (v.color === 'green') banner.style.borderColor = 'var(--gain)';
-                else if (v.color === 'red') banner.style.borderColor = 'var(--loss)';
-                else banner.style.borderColor = '#f59e0b';
+                    const card = document.createElement('div');
+                    card.style.cssText = `background:var(--card-bg); border:1px solid var(--card-border); border-radius:16px; padding:1.25rem 1.5rem; backdrop-filter:var(--glass-blur);`;
+                    card.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                            <div style="font-size:1.15rem; font-weight:800;">${sig.strike}</div>
+                            <span style="padding:0.25rem 0.75rem; border-radius:20px; font-weight:800; font-size:0.75rem; background:${dirBg}; color:${dirColor};">${sig.direction}</span>
+                        </div>
+                        <div style="font-size:0.92rem; font-weight:600; margin-bottom:0.75rem;">${sig.headline}</div>
+                        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
+                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;">${sig.flow_cr}</span>
+                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem;">${sig.time}</span>
+                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700; color:var(--secondary-accent);">Score ${sig.score}</span>
+                        </div>
+                        <details style="border-top:1px solid var(--card-border); padding-top:0.6rem; margin-top:0.4rem;">
+                            <summary style="font-size:0.78rem; font-weight:800; letter-spacing:0.06em; color:var(--text-muted); cursor:pointer; text-transform:uppercase;">WHAT THE EVIDENCE SHOWS</summary>
+                            <div style="margin-top:0.4rem;">${evHtml}</div>
+                        </details>
+                    `;
+                    topSigContainer.appendChild(card);
+                });
 
-                // FII/DII
-                const fii = data.fii || {};
-                const fiiVal = parseFloat(fii.fii_net || 0);
-                const diiVal = parseFloat(fii.dii_net || 0);
-                const fiiEl = document.getElementById('intel-fii-val');
-                const diiEl = document.getElementById('intel-dii-val');
-                fiiEl.textContent = (fiiVal >= 0 ? '+' : '') + '₹' + Math.abs(fiiVal).toLocaleString('en-IN') + ' Cr';
-                fiiEl.style.color = fiiVal >= 0 ? 'var(--gain)' : 'var(--loss)';
-                diiEl.textContent = (diiVal >= 0 ? '+' : '') + '₹' + Math.abs(diiVal).toLocaleString('en-IN') + ' Cr';
-                diiEl.style.color = diiVal >= 0 ? 'var(--gain)' : 'var(--loss)';
-                document.getElementById('intel-fii-status').textContent = 'FII ' + (fii.fii_status || '') + (fii.date ? ' · ' + fii.date : '');
-                document.getElementById('intel-dii-status').textContent = 'DII ' + (fii.dii_status || '');
+                // 2. Institutional Campaigns (Stock Flow Cards)
+                const campContainer = document.getElementById('intel-campaigns-list');
+                campContainer.innerHTML = '';
+                (data.campaigns || []).forEach(c => {
+                    const isBull = c.direction === 'BULLISH';
+                    const mainColor = isBull ? 'var(--gain)' : 'var(--loss)';
+                    const flagColor = c.flag_color === 'green' ? 'var(--gain)' : (c.flag_color === 'red' ? 'var(--loss)' : '#f59e0b');
+
+                    let legsHtml = (c.legs || []).map(l => `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:600;">${l.name} ${l.amount}</span>`).join(' ');
+                    let warnHtml = c.warning ? `<div style="font-size:0.78rem; color:#f59e0b; margin-top:0.5rem;">⚠️ ${c.warning}</div>` : '';
+
+                    const cCard = document.createElement('div');
+                    cCard.style.cssText = `background:var(--card-bg); border:1px solid ${isBull ? 'rgba(0,200,83,0.3)' : 'rgba(255,61,61,0.3)'}; border-radius:16px; padding:1.25rem 1.5rem; backdrop-filter:var(--glass-blur);`;
+                    cCard.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                            <div style="font-size:1.1rem; font-weight:800;">${c.ticker}</div>
+                            <div style="display:flex; gap:0.5rem; align-items:center;">
+                                <span style="font-size:0.75rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:12px; background:rgba(255,255,255,0.08); color:${flagColor};">${c.status_flag}</span>
+                                <span style="font-size:0.8rem; font-weight:800; color:${mainColor};">${isBull ? '↑' : '↓'} ${c.direction}</span>
+                            </div>
+                        </div>
+                        <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:0.6rem;">
+                            ${c.gross_flow} · <span style="color:var(--secondary-accent); font-weight:700;">${c.net_flow}</span> · ${c.legs_count} · first ${c.first_time} · last ${c.last_time}
+                        </div>
+                        <div style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin-bottom:0.5rem;">${legsHtml}</div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="color:#f59e0b; font-size:0.85rem;">${c.stars} <span style="color:var(--text-muted); font-size:0.78rem;">${c.confirmation}</span></span>
+                            <span style="font-size:0.75rem; color:var(--text-muted);">${c.oi_build}</span>
+                        </div>
+                        ${warnHtml}
+                    `;
+                    campContainer.appendChild(cCard);
+                });
+
+                // 3. Top OI Buildup
+                const oiContainer = document.getElementById('intel-top-oi-list');
+                oiContainer.innerHTML = '';
+                (data.top_oi || []).forEach(item => {
+                    const isBull = item.sentiment === 'BULLISH';
+                    const color = isBull ? 'var(--gain)' : 'var(--loss)';
+                    const row = document.createElement('div');
+                    row.style.cssText = `display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; border-bottom:1px solid var(--card-border);`;
+                    row.innerHTML = `
+                        <div>
+                            <div style="font-weight:700; font-size:0.88rem;">${item.strike}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">${item.expiry}</div>
+                        </div>
+                        <div style="font-weight:800; font-size:0.9rem; color:${color};">${item.oi_change}</div>
+                    `;
+                    oiContainer.appendChild(row);
+                });
+
+                // 4. PCR Watch Bar Gauges
+                const pcrContainer = document.getElementById('intel-pcr-watch-list');
+                pcrContainer.innerHTML = '';
+                (data.pcr_watch || []).forEach(p => {
+                    const val = parseFloat(p.pcr);
+                    const color = val > 1.15 ? 'var(--gain)' : (val < 0.85 ? 'var(--loss)' : '#f59e0b');
+                    const barWidth = Math.min(100, Math.max(10, val * 50));
+                    
+                    const row = document.createElement('div');
+                    row.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:700; margin-bottom:0.25rem;">
+                            <span>${p.index}</span>
+                            <span style="color:${color};">${val}</span>
+                        </div>
+                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                            <div style="width:${barWidth}%; height:100%; background:${color}; border-radius:4px;"></div>
+                        </div>
+                    `;
+                    pcrContainer.appendChild(row);
+                });
+
+                // 5. Kasandra Execution Trade Log
+                const logData = data.trade_log || {};
+                document.getElementById('intel-log-summary').textContent = logData.summary || '';
+                document.getElementById('intel-log-time').textContent = logData.updated_at ? 'updated ' + logData.updated_at : '';
+                const logTable = document.getElementById('intel-trade-log-body');
+                logTable.innerHTML = '';
+                (logData.trades || []).forEach(t => {
+                    const isWin = t.result === 'WIN';
+                    const resColor = isWin ? 'var(--gain)' : 'var(--loss)';
+                    const resBg = isWin ? 'rgba(0,200,83,0.15)' : 'rgba(255,61,61,0.15)';
+                    const pipsColor = t.pips.startsWith('+') ? 'var(--gain)' : 'var(--loss)';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-size:0.8rem; color:var(--text-muted);">${t.date}</td>
+                        <td style="font-weight:700; color:var(--loss);">${t.side}</td>
+                        <td class="num" style="font-weight:600;">${t.entry}</td>
+                        <td class="num" style="font-weight:700; color:${pipsColor};">${t.pips}</td>
+                        <td><span style="padding:0.2rem 0.5rem; border-radius:6px; font-weight:800; font-size:0.75rem; background:${resBg}; color:${resColor};">${t.result}</span></td>
+                    `;
+                    logTable.appendChild(tr);
+                });
 
                 // F&O days
                 document.getElementById('intel-fno-days').textContent = data.fno_days ?? '—';

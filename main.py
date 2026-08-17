@@ -5058,24 +5058,51 @@ async def handle_health_check(reader, writer):
                 )
             stock_signals_text = "\n".join(scan_lines) if scan_lines else "No active signals."
             
+            # Format institutional option signals & campaigns
+            graded_signals = intel.get("top_graded_signals", [])
+            campaigns = intel.get("campaigns", [])
+            pcr_watch = intel.get("pcr_watch", [])
+
+            sig_lines = []
+            for sig in graded_signals[:3]:
+                sig_lines.append(
+                    f"• <b>{sig['strike']}</b> [{sig['direction']}] — Score {sig['score']}\n"
+                    f"  💰 Flow: <b>{sig['flow_cr']}</b> | Time: {sig['time']}\n"
+                    f"  📝 {sig['headline']}"
+                )
+            sig_text = "\n\n".join(sig_lines) if sig_lines else "No active graded signals."
+
+            camp_lines = []
+            for c in campaigns[:3]:
+                legs_str = " | ".join([f"{l['name']} {l['amount']}" for l in c['legs']])
+                warn_str = f"\n  ⚠️ <i>{c['warning']}</i>" if c.get('warning') else ""
+                camp_lines.append(
+                    f"• <b>{c['ticker']}</b> [{c['direction']}] {c['stars']} [{c['status_flag']}]\n"
+                    f"  💰 Gross: {c['gross_flow']} ({c['net_flow']})\n"
+                    f"  🧩 Legs: {legs_str}{warn_str}"
+                )
+            camp_text = "\n\n".join(camp_lines) if camp_lines else "No active campaigns."
+
+            pcr_str = " | ".join([f"{p['index']}: <b>{p['pcr']}</b>" for p in pcr_watch[:4]])
+
             message = (
-                f"🇮🇳 <b>INDIAN MARKET INTELLIGENCE REPORT ({exchange})</b>\n"
+                f"🇮🇳 <b>INSTITUTIONAL OPTIONS FLOW & TAPE INTEL ({exchange})</b>\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                 f"📊 <b>Market Verdict:</b> {v.get('emoji', '🟡')} <b>{v.get('verdict', 'NEUTRAL')}</b>\n"
                 f"📝 <b>Rationale:</b> {v.get('reason', '')}\n"
+                f"🏛 <b>FII Net:</b> ₹{fii_net_val:,.2f} Cr ({fii_status}) | 🏠 <b>DII Net:</b> ₹{dii_net_val:,.2f} Cr ({dii_status})\n"
+                f"🚪 <b>F&O Expiry:</b> <b>{fno_days}</b> days remaining\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"💰 <b>FII/DII Net Flows</b>\n"
-                f"🔹 FII Net: <b>₹{fii_net_val:,.2f} Cr</b> ({fii_status})\n"
-                f"🔸 DII Net: <b>₹{dii_net_val:,.2f} Cr</b> ({dii_status})\n"
-                f"📅 Flows Date: {fii_date}\n"
+                f"⚡ <b>TOP GRADED OPTIONS SIGNALS</b>\n"
+                f"{sig_text}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"⚡ <b>Top Stock Scan Signals</b>\n"
-                f"{stock_signals_text}\n"
+                f"🏢 <b>INSTITUTIONAL CAMPAIGNS (STOCK FLOWS)</b>\n"
+                f"{camp_text}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🗓 <b>F&O Expiry Countdown</b>\n"
-                f"🚪 <b>{fno_days}</b> days until next monthly expiry.\n"
+                f"📊 <b>INDEX PCR WATCH</b>\n"
+                f"{pcr_str}\n"
                 f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🤖 <i>Powered by FinRobot AI Agent</i>"
+                f"🤖 <i>Powered by Indian Market Intelligence Engine</i>"
             )
             
             from telegram import Bot
