@@ -317,6 +317,48 @@ async def monitor_indian_market(bot: Bot):
                     except Exception as pre_err:
                         print(f"[INDIAN] Pre-market options alert broadcast failed: {pre_err}")
 
+            # Market Open Intraday Options Flags & OI Build Report (at 9:15 - 9:30 AM IST)
+            if ist_now.weekday() < 5 and ist_now.hour == 9 and 15 <= ist_now.minute <= 30:
+                if state.can_send_message("indian_market_open_flags", 80000): # at most once a day
+                    try:
+                        print("[INDIAN] Running Market Open options flag scan...")
+                        import indian_scoring as iscoring
+                        intel = iscoring.get_full_intel(exchange="NSE")
+                        campaigns = intel.get("campaigns", [])
+                        
+                        flag_lines = []
+                        for c in campaigns[:5]:
+                            legs_str = " | ".join([f"{l['name']} {l['amount']}" for l in c.get('legs', [])])
+                            warn_str = f"\n  ⚠️ <i>{c['warning']}</i>" if c.get('warning') else ""
+                            flag_lines.append(
+                                f"• <b>{c['ticker']}</b> [{c['status_flag']}] ({c['direction']})\n"
+                                f"  💰 Gross Flow: <b>{c['gross_flow']}</b> ({c['net_flow']})\n"
+                                f"  📈 OI Build: <b>{c['oi_build']}</b>\n"
+                                f"  🧩 Legs: {legs_str}{warn_str}"
+                            )
+                        flag_text = "\n\n".join(flag_lines) if flag_lines else "No active flags at open."
+                        
+                        pcr_watch = intel.get("pcr_watch", [])
+                        pcr_str = " | ".join([f"{p['index']}: <b>{p['pcr']}</b>" for p in pcr_watch[:3]])
+                        
+                        date_str = ist_now.strftime("%d %b %Y")
+                        telegram_open_msg = (
+                            f"🇮🇳 <b>INDIAN MARKET OPEN: INTRADAY OPTIONS FLAGS ({date_str})</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🛡 <b>GRADED INSTITUTIONAL STRIKE FLAGS</b>\n\n"
+                            f"{flag_text}\n\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📊 <b>OPENING INDEX PCR</b>\n"
+                            f"{pcr_str}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🤖 <i>Powered by Options Flow Engine</i>"
+                        )
+                        await broadcast_message(bot, telegram_open_msg, parse_mode="HTML")
+                        state.record_message("indian_market_open_flags")
+                        print("[INDIAN] Market Open intraday options flags broadcasted to Telegram")
+                    except Exception as open_err:
+                        print(f"[INDIAN] Market Open options flags broadcast failed: {open_err}")
+
             if sessions["indian"] and state.can_send_message(category, 300):  # 5 min cooldown
                 # Fetch Indian market snapshot
                 snapshot = indian_market.format_market_snapshot()

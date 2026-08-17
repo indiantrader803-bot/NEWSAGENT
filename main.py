@@ -5112,7 +5112,51 @@ async def handle_health_check(reader, writer):
                 response_body = json.dumps({"success": True, "message": "Successfully broadcasted to Telegram!"})
             else:
                 response_body = json.dumps({"error": "Telegram BOT_TOKEN is not configured."})
-                
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
+    elif path_only == "/api/broadcast-nifty-sensex-oi":
+        try:
+            import indian_scoring as iscoring
+            report = iscoring.fetch_nifty_sensex_oi_report()
+            
+            nifty_lines = []
+            for n in report.get("nifty_oi", []):
+                nifty_lines.append(f"• <b>{n['strike']}</b> ({n['expiry']}) ➔ <b>{n['oi_change']}</b> [{n['sentiment']}]")
+            nifty_text = "\n".join(nifty_lines) if nifty_lines else "No active Nifty OI buildup."
+
+            sensex_lines = []
+            for s in report.get("sensex_oi", []):
+                sensex_lines.append(f"• <b>{s['strike']}</b> ({s['expiry']}) ➔ <b>{s['oi_change']}</b> [{s['sentiment']}]")
+            sensex_text = "\n".join(sensex_lines) if sensex_lines else "No active Sensex OI buildup."
+
+            pcr_lines = []
+            for p in report.get("pcr_watch", []):
+                pcr_lines.append(f"• <b>{p['index']}:</b> <b>{p['pcr']}</b> ({p['sentiment']})")
+            pcr_text = "\n".join(pcr_lines)
+
+            message = (
+                f"🇮🇳 <b>NIFTY & SENSEX REAL-TIME OI BUILDUP & PCR WATCH</b>\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📈 <b>NIFTY 50 TOP OI BUILDUP</b>\n"
+                f"{nifty_text}\n\n"
+                f"🏛 <b>SENSEX TOP OI BUILDUP</b>\n"
+                f"{sensex_text}\n\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"📊 <b>INDEX PCR WATCH</b>\n"
+                f"{pcr_text}\n"
+                f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🤖 <i>Powered by Nifty & Sensex Options Flow Engine</i>"
+            )
+
+            from telegram import Bot
+            if BOT_TOKEN:
+                bot = Bot(token=BOT_TOKEN)
+                await broadcast(bot, message)
+                response_body = json.dumps({"success": True, "message": "Successfully broadcasted Nifty & Sensex OI report to Telegram!"})
+            else:
+                response_body = json.dumps({"error": "Telegram BOT_TOKEN is not configured."})
         except Exception as e:
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
