@@ -5161,6 +5161,21 @@ async def handle_health_check(reader, writer):
             response_body = json.dumps({"error": str(e)})
         content_type = "application/json"
 
+    elif path_only == "/api/broadcast-graded-flags":
+        try:
+            import indian_scoring as iscoring
+            report = iscoring.format_graded_flags_telegram_message()
+            from telegram import Bot
+            if BOT_TOKEN:
+                bot = Bot(token=BOT_TOKEN)
+                await broadcast(bot, report)
+                response_body = json.dumps({"success": True, "message": "Successfully broadcasted Graded Flags report to Telegram!"})
+            else:
+                response_body = json.dumps({"error": "Telegram BOT_TOKEN is not configured."})
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+        content_type = "application/json"
+
     elif path_only == "/api/uptime":
         try:
             uptime_seconds = int(time.time() - START_TIME)
