@@ -80,7 +80,7 @@ def format_market_snapshot() -> str | None:
 
     lines = ["<b>Indian Market Snapshot</b>"]
     for name, data in indices.items():
-        arrow = "GREEN" if data["change"] >= 0 else "RED"
+        arrow = "🟢" if data["change"] >= 0 else "🔴"
         lines.append(
             f"{arrow} <b>{name}:</b> {data['price']} "
             f"({'+' if data['change'] >= 0 else ''}{data['change']} | "
@@ -95,11 +95,11 @@ def format_market_snapshot() -> str | None:
         if gainers:
             lines.append(f"\n<b>Top Gainers:</b>")
             for s in gainers:
-                lines.append(f"  + {s['symbol']}: {s['price']} (+{s['pct']}%)")
+                lines.append(f"  🟢 {s['symbol']}: {s['price']} (+{s['pct']}%)")
         if losers:
             lines.append(f"\n<b>Top Losers:</b>")
             for s in losers:
-                lines.append(f"  - {s['symbol']}: {s['price']} ({s['pct']}%)")
+                lines.append(f"  🔴 {s['symbol']}: {s['price']} ({s['pct']}%)")
 
     return "\n".join(lines)
 

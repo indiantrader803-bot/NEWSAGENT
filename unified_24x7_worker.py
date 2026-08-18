@@ -191,7 +191,7 @@ def get_current_market_session() -> dict[str, bool]:
     ist_now = now_utc + timedelta(hours=5, minutes=30)
     indian_open = (
         weekday < 5 and  # Mon-Fri
-        9 <= ist_now.hour < 15 or (ist_now.hour == 15 and ist_now.minute <= 30)
+        (9 <= ist_now.hour < 15 or (ist_now.hour == 15 and ist_now.minute <= 30))
     )
     
     # US market: 9:30 AM - 4:00 PM EST/EDT = ~14:30 - 21:00 UTC (Mon-Fri)
@@ -376,7 +376,7 @@ async def monitor_indian_market(bot: Bot):
                 # Fetch Indian market snapshot
                 snapshot = indian_market.format_market_snapshot()
                 if snapshot:
-                    message = f"🇮🇳 *Indian Market Update*\n{snapshot}"
+                    message = f"🇮🇳 <b>Indian Market Update</b>\n{snapshot}"
                     await broadcast_message(bot, message, parse_mode="HTML")
                     state.record_message(category)
                     print(f"[INDIAN] Market snapshot sent")
