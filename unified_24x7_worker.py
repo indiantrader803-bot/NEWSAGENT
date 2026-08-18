@@ -75,6 +75,7 @@ class WorkerState:
     def __init__(self):
         self.last_message_times: dict[str, float] = {}
         self.daily_message_count: dict[str, int] = {}
+        self.last_sent_content: dict[str, str] = {}
         self.last_reset_day = datetime.now(timezone.utc).date().isoformat()
         self.load()
     
@@ -87,6 +88,7 @@ class WorkerState:
                     self.last_message_times = data.get("last_message_times", {})
                     self.daily_message_count = data.get("daily_message_count", {})
                     self.last_reset_day = data.get("last_reset_day", self.last_reset_day)
+                    self.last_sent_content = data.get("last_sent_content", {})
         except Exception as e:
             print(f"[STATE] Load error: {e}")
     
@@ -98,6 +100,7 @@ class WorkerState:
                     "last_message_times": self.last_message_times,
                     "daily_message_count": self.daily_message_count,
                     "last_reset_day": self.last_reset_day,
+                    "last_sent_content": self.last_sent_content,
                 }, f)
         except Exception as e:
             print(f"[STATE] Save error: {e}")
@@ -116,11 +119,17 @@ class WorkerState:
         
         return (now - last_time) >= cooldown
     
-    def record_message(self, category: str):
+    def is_duplicate(self, category: str, content: str) -> bool:
+        """Check if exact same message content was sent recently for this category."""
+        return self.last_sent_content.get(category) == content
+    
+    def record_message(self, category: str, content: str = None):
         """Record that a message was sent."""
         now = time.time()
         self.last_message_times[category] = now
         self.daily_message_count[category] = self.daily_message_count.get(category, 0) + 1
+        if content:
+            self.last_sent_content[category] = content
         self.save()
 
 
@@ -372,21 +381,22 @@ async def monitor_indian_market(bot: Bot):
                     except Exception as close_err:
                         print(f"[INDIAN] Market Close flags broadcast failed: {close_err}")
 
-            if sessions["indian"] and state.can_send_message(category, 300):  # 5 min cooldown
+            if sessions["indian"] and state.can_send_message(category, 3600):  # 1 hour cooldown
                 # Fetch Indian market snapshot
                 snapshot = indian_market.format_market_snapshot()
                 if snapshot:
                     message = f"🇮🇳 <b>Indian Market Update</b>\n{snapshot}"
-                    await broadcast_message(bot, message, parse_mode="HTML")
-                    state.record_message(category)
-                    print(f"[INDIAN] Market snapshot sent")
+                    if not state.is_duplicate(category, message):
+                        await broadcast_message(bot, message, parse_mode="HTML")
+                        state.record_message(category, content=message)
+                        print(f"[INDIAN] Market snapshot sent")
                 
-                # Options suggestions (less frequent)
-                if state.can_send_message(f"{category}_options", 1800):  # 30 min
+                # Options suggestions (less frequent - 2 hours)
+                if state.can_send_message(f"{category}_options", 7200):
                     nifty_opts = indian_market.format_nifty_options_suggestion()
-                    if nifty_opts:
+                    if nifty_opts and not state.is_duplicate(f"{category}_options", nifty_opts):
                         await broadcast_message(bot, nifty_opts, parse_mode="HTML")
-                        state.record_message(f"{category}_options")
+                        state.record_message(f"{category}_options", content=nifty_opts)
                         print(f"[INDIAN] Options suggestion sent")
             
             # Check every minute during market hours, every 5 minutes otherwise
