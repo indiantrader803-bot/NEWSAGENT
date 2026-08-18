@@ -1515,9 +1515,10 @@
 
         // Signal Classification Helper
         function classifySignal(sig) {
-            const sym = (sig.pair || "").toUpperCase();
-            const src = (sig.source || "").toLowerCase();
-            if (src === 'india' || src === 'intraday' || sym.includes(".NS") || sym.includes(".BO") || sym.includes("NIFTY") || sym.includes("SENSEX") || sym.includes("BSE") || sym.includes("NSE") || sym === "TCS" || sym === "RELIANCE" || sym === "HDFCBANK") {
+            if (!sig) return 'ALL';
+            const sym = String(sig.pair || "").toUpperCase();
+            const src = String(sig.source || "").toLowerCase();
+            if (src === 'india' || src === 'intraday' || sym.includes(".NS") || sym.includes(".BO") || sym.includes("NIFTY") || sym.includes("SENSEX") || sym.includes("BSE") || sym.includes("NSE") || sym.includes("TCS") || sym.includes("RELIANCE") || sym.includes("HDFCBANK")) {
                 return 'INDIAN';
             }
             if (sym.includes("XAU") || sym.includes("GOLD") || sym.includes("XAG") || sym.includes("SILVER") || sym.includes("OIL") || sym.includes("WTI") || sym.includes("BRENT") || src === 'commodities') {
@@ -1549,12 +1550,14 @@
 
         function renderSignals() {
             const container = document.getElementById("signals-container");
+            if (!container) return;
             container.innerHTML = "";
             
             const uniqueSignals = [];
             const seen = new Set();
-            allSignals.forEach(s => {
-                const key = `${s.pair}_${s.direction}_${s.entry}_${s.tp1}_${s.sl}`;
+            (allSignals || []).forEach(s => {
+                if (!s) return;
+                const key = `${s.pair || ''}_${s.direction || ''}_${s.entry || ''}_${s.tp1 || ''}_${s.sl || ''}`;
                 if (!seen.has(key)) {
                     seen.add(key);
                     uniqueSignals.push(s);
@@ -1568,15 +1571,17 @@
 
             if (filtered.length === 0) {
                 container.innerHTML = `
-                    <div class="signal-card buy" style="grid-column: 1/-1; text-align: center; padding: 3rem;">
-                        <div class="asset-name">No active ${currentTab.toLowerCase()} signals currently available.</div>
+                    <div class="signal-card buy" style="grid-column: 1/-1; text-align: center; padding: 3rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;">
+                        <div class="asset-name" style="font-size: 1.1rem; color: var(--text-main); font-weight: 700;">No active ${currentTab} signals currently available.</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">Select another category tab like 'All', 'Forex', or 'Indian Market' to view active live signals.</div>
                     </div>
                 `;
                 return;
             }
 
             filtered.forEach((sig, idx) => {
-                const isBuy = sig.direction.toUpperCase().includes("BUY") || sig.direction.toUpperCase().includes("LONG") || sig.direction.toUpperCase().includes("BULLISH");
+                const dir = String(sig.direction || 'BUY').toUpperCase();
+                const isBuy = dir.includes("BUY") || dir.includes("LONG") || dir.includes("BULLISH");
                 const cardClass = isBuy ? "buy" : "sell";
                 const badgeText = isBuy ? "BUY / LONG" : "SELL / SHORT";
                 
@@ -1585,25 +1590,25 @@
                 card.innerHTML = `
                     <div class="signal-top">
                         <div class="signal-badge">${badgeText}</div>
-                        <div class="signal-timestamp">${sig.timestamp || 'Live'}</div>
+                        <div class="signal-timestamp">${sig.timestamp || sig.time || 'Live'}</div>
                     </div>
-                    <div class="asset-name">${sig.pair}</div>
+                    <div class="asset-name">${sig.pair || 'ASSET'}</div>
                     <div class="signal-parameters">
                         <div class="param-group">
                             <span class="param-label">Entry</span>
-                            <span class="param-value">${sig.entry}</span>
+                            <span class="param-value">${sig.entry || '—'}</span>
                         </div>
                         <div class="param-group">
                             <span class="param-label">Stop Loss</span>
-                            <span class="param-value">${sig.sl}</span>
+                            <span class="param-value">${sig.sl || '—'}</span>
                         </div>
                         <div class="param-group" style="margin-top: 0.5rem;">
                             <span class="param-label">TP 1</span>
-                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp1}</span>
+                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp1 || '—'}</span>
                         </div>
                         <div class="param-group" style="margin-top: 0.5rem;">
                             <span class="param-label">TP 2</span>
-                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp2}</span>
+                            <span class="param-value" style="color: var(--secondary-accent);">${sig.tp2 || '—'}</span>
                         </div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 0.25rem;">
