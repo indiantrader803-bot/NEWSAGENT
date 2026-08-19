@@ -594,6 +594,18 @@ async def run_24x7_worker():
     print("[WEBSOCKET] Starting Finnhub WebSocket...")
     ws_thread = realtime_alert.start_websocket_thread()
     
+    async def keep_alive_ping():
+        import aiohttp
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get("https://newsagent-pro-ui.onrender.com/api/signals") as resp:
+                        status = resp.status
+                        print(f"[PING] Kept UI awake (Status: {status})")
+            except Exception as e:
+                print(f"[PING] Error: {e}")
+            await asyncio.sleep(600)  # Ping every 10 minutes
+
     # Create all monitoring tasks
     tasks = [
         monitor_indian_market(bot),
@@ -603,6 +615,7 @@ async def run_24x7_worker():
         monitor_commodities(bot),
         monitor_realtime_alerts(bot),
         send_market_briefing(bot),
+        keep_alive_ping(),
     ]
     
     print(f"[WORKER] Started {len(tasks)} monitoring tasks")
