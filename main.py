@@ -3767,6 +3767,26 @@ async def send_category_article(
         if title_norm:
             seen_keys.add(title_key)
         save_seen_keys(seen_keys)
+        
+        # Save signal to log for UI
+        pair = identify_asset(article) or category_prefix.upper()
+        if bias:
+            global _signal_log
+            _signal_log = load_signal_log()
+            _signal_log.append({
+                "pair": pair,
+                "direction": direction.upper(),
+                "entry": 0.0,
+                "tp1": 0.0,
+                "tp2": 0.0,
+                "sl": 0.0,
+                "confidence": 85 if confidence == "High" else 70,
+                "timestamp": datetime.now(timezone.utc).strftime("%H:%M UTC"),
+                "source": category_prefix,
+                "reason": title
+            })
+            save_signal_log(_signal_log)
+            
         return 1
     return 0
 
