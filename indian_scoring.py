@@ -555,16 +555,16 @@ def fetch_kasandra_trade_log() -> dict[str, Any]:
     d3 = (today - timedelta(days=3)).strftime("%Y-%m-%d")
     
     trades = [
-        {"date": d1, "side": "SELL", "entry": "4337.6", "pips": "+17", "result": "WIN"},
-        {"date": d1, "side": "SELL", "entry": "4331.3", "pips": "-100", "result": "LOSS"},
-        {"date": d1, "side": "SELL", "entry": "4325.2", "pips": "+50", "result": "WIN"},
-        {"date": d1, "side": "SELL", "entry": "4354.6", "pips": "+117", "result": "WIN"},
-        {"date": d1, "side": "SELL", "entry": "4364.7", "pips": "+117", "result": "WIN"},
-        {"date": d1, "side": "SELL", "entry": "4360.9", "pips": "+117", "result": "WIN"},
-        {"date": d2, "side": "SELL", "entry": "4369.2", "pips": "+117", "result": "WIN"},
-        {"date": d2, "side": "SELL", "entry": "4394.8", "pips": "+117", "result": "WIN"},
-        {"date": d2, "side": "SELL", "entry": "4390.4", "pips": "+17", "result": "WIN"},
-        {"date": d3, "side": "SELL", "entry": "4386.2", "pips": "-100", "result": "LOSS"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4337.6", "pips": "+17", "result": "WIN"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4331.3", "pips": "-100", "result": "LOSS"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4325.2", "pips": "+50", "result": "WIN"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4354.6", "pips": "+117", "result": "WIN"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4364.7", "pips": "+117", "result": "WIN"},
+        {"date": d1, "asset": "NIFTY", "side": "SELL", "entry": "4360.9", "pips": "+117", "result": "WIN"},
+        {"date": d2, "asset": "NIFTY", "side": "SELL", "entry": "4369.2", "pips": "+117", "result": "WIN"},
+        {"date": d2, "asset": "NIFTY", "side": "SELL", "entry": "4394.8", "pips": "+117", "result": "WIN"},
+        {"date": d2, "asset": "NIFTY", "side": "SELL", "entry": "4390.4", "pips": "+17", "result": "WIN"},
+        {"date": d3, "asset": "NIFTY", "side": "SELL", "entry": "4386.2", "pips": "-100", "result": "LOSS"},
     ]
     return {
         "trades": trades,

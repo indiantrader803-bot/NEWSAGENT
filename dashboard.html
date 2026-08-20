@@ -1203,7 +1203,8 @@
                             <thead>
                                 <tr>
                                     <th>DATE</th>
-                                    <th>SIDE</th>
+                                      <th>ASSET</th>
+<th>SIDE</th>
                                     <th>ENTRY</th>
                                     <th>PIPS / PTS</th>
                                     <th>RESULT</th>
@@ -2331,6 +2332,7 @@
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td style="font-size:0.8rem; color:var(--text-muted);">${t.date}</td>
+                          <td style="font-weight:700; color:var(--text-color);">${t.asset || "NIFTY"}</td>
                         <td style="font-weight:700; color:var(--loss);">${t.side}</td>
                         <td class="num" style="font-weight:600;">${t.entry}</td>
                         <td class="num" style="font-weight:700; color:${pipsColor};">${t.pips}</td>
