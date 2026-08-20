@@ -2678,7 +2678,7 @@ def _strip_md(text: str) -> str:
 
 
 def _confidence_pct(level: str) -> int:
-    return {"High": 78, "Medium": 62, "Low": 45}.get(level, 50)
+    return {"High": 85, "Medium": 72, "Low": 55}.get(level, 50)
 
 
 _USD_QUOTE_PAIRS = frozenset({
@@ -3783,7 +3783,8 @@ async def send_category_article(
         direction, confidence = "Neutral", "Low"
         if bias:
             direction, confidence = compute_confidence(text_body)
-        if confidence not in {"High", "Medium"} or direction == "Neutral":
+        # Filter: ONLY broadcast High-confidence directional signals to Telegram (70%+ rule)
+        if confidence != "High" or direction == "Neutral":
             continue
 
         text = format_func(article)
@@ -3809,7 +3810,7 @@ async def send_category_article(
                 "tp1": 0.0,
                 "tp2": 0.0,
                 "sl": 0.0,
-                "confidence": 85 if confidence == "High" else 70,
+                "confidence": 90 if confidence == "High" else 75,
                 "timestamp": datetime.now(timezone.utc).strftime("%H:%M UTC"),
                 "source": category_prefix,
                 "reason": title
