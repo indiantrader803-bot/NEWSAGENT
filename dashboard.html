@@ -66,6 +66,109 @@
             --glass-blur: blur(12px);
         }
 
+        /* =============================================
+           LIGHT MODE OVERRIDES — Fix all visibility
+           ============================================= */
+        [data-theme="light"] body {
+            background-image:
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.07) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(5, 150, 105, 0.07) 0px, transparent 50%),
+                linear-gradient(135deg, #f3f5fa 0%, #e8ecf4 100%);
+        }
+        [data-theme="light"] .sidebar {
+            background: rgba(243, 245, 250, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] header {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        [data-theme="light"] .signal-card {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        [data-theme="light"] .signal-card:hover {
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+            border-color: rgba(0, 0, 0, 0.12);
+            transform: translateY(-4px) scale(1.01);
+        }
+        [data-theme="light"] .skeleton {
+            background: linear-gradient(90deg,
+                rgba(0,0,0,0.04) 25%,
+                rgba(0,0,0,0.08) 37%,
+                rgba(0,0,0,0.04) 63%);
+            background-size: 400px 100%;
+        }
+        [data-theme="light"] .spinner {
+            border-color: rgba(0, 0, 0, 0.1);
+            border-top-color: var(--neon-accent);
+        }
+        [data-theme="light"] .nav-item:hover,
+        [data-theme="light"] .nav-item.active {
+            background: rgba(79, 70, 229, 0.08);
+        }
+        [data-theme="light"] .news-card,
+        [data-theme="light"] .analyzer-box,
+        [data-theme="light"] .pricing-card {
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+        [data-theme="light"] th {
+            background: rgba(79, 70, 229, 0.04);
+        }
+        [data-theme="light"] .txt-symbol {
+            background: rgba(0, 0, 0, 0.03);
+        }
+        [data-theme="light"] .tg-promo-card {
+            box-shadow: 0 8px 24px rgba(0, 136, 204, 0.15);
+        }
+
+        /* =============================================
+           UI/UX DESIGN IMPROVEMENTS
+           ============================================= */
+        /* Smooth page transitions */
+        .page-panel.active {
+            animation: fade-in 0.3s ease-out;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Spring card hover */
+        .signal-card:hover, .intel-card:hover, .news-card:hover, .pricing-card:hover {
+            transform: translateY(-4px) scale(1.01);
+        }
+
+        /* Status badge glow */
+        .buy .signal-badge { box-shadow: 0 0 12px rgba(16, 185, 129, 0.3); }
+        .sell .signal-badge { box-shadow: 0 0 12px rgba(239, 68, 68, 0.3); }
+
+        /* Modern focus ring */
+        .txt-symbol:focus-visible, .filter-input:focus-visible {
+            outline: 2px solid var(--neon-accent);
+            outline-offset: 2px;
+            border-color: transparent;
+        }
+
+        /* Table row hover */
+        tr:hover td {
+            background: rgba(99, 102, 241, 0.04);
+            transition: background 0.15s ease;
+        }
+
+        /* Button hover improvements */
+        .btn-analyze:hover, .btn-subscribe:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35);
+        }
+
+        /* Health status badge */
+        .status-badge {
+            transition: all 0.2s ease;
+        }
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
