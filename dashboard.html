@@ -2096,8 +2096,14 @@
             }
         }
 
-        // ── Indian Market Intelligence ──────────────────────────────────────
+        // 🇮🇳 Indian Market Intelligence ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         let scannedStocks = [];
+
+        async function loadIndianIntel() {
+            if (intelLoaded) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/indian-intel`);
+                const data = await res.json();
 
                 // 1. Top Signals (Graded Live)
                 const topSigContainer = document.getElementById('intel-top-signals-list');
