@@ -368,6 +368,73 @@ async def monitor_indian_market(bot: Bot):
                     except Exception as open_err:
                         print(f"[INDIAN] Market Open options flags broadcast failed: {open_err}")
 
+            # Mid-Market Indian Intel Report (at 12:00 PM - 12:15 PM IST)
+            if ist_now.weekday() < 5 and ist_now.hour == 12 and 0 <= ist_now.minute <= 15:
+                if state.can_send_message("indian_midmarket_intel", 80000): # at most once a day
+                    try:
+                        print("[INDIAN] Running daily mid-market intel report...")
+                        import indian_scoring as iscoring
+                        intel = iscoring.get_full_intel(exchange="NSE")
+                        v = intel.get("verdict", {})
+                        fii = intel.get("fii", {})
+                        fno_days = intel.get("fno_days", 0)
+                        
+                        fii_net_val = fii.get("fii_net", 0.0)
+                        dii_net_val = fii.get("dii_net", 0.0)
+                        fii_status = fii.get("fii_status", "Neutral")
+                        dii_status = fii.get("dii_status", "Neutral")
+                        
+                        graded_signals = intel.get("top_graded_signals", [])
+                        campaigns = intel.get("campaigns", [])
+                        pcr_watch = intel.get("pcr_watch", [])
+                        
+                        sig_lines = []
+                        for sig in graded_signals[:3]:
+                            sig_lines.append(
+                                f"▪️ <b>{sig['strike']}</b> [{sig['direction']}] — Score {sig['score']}\n"
+                                f"  🌊 Flow: <b>{sig['flow_cr']}</b> | Time: {sig['time']}\n"
+                                f"  💡 {sig['headline']}"
+                            )
+                        sig_text = "\n\n".join(sig_lines) if sig_lines else "No active graded signals."
+                        
+                        camp_lines = []
+                        for c in campaigns[:3]:
+                            legs_str = " | ".join([f"{l['name']} {l['amount']}" for l in c.get('legs', [])])
+                            warn_str = f"\n  ⚠️ <i>{c['warning']}</i>" if c.get('warning') else ""
+                            camp_lines.append(
+                                f"▪️ <b>{c['ticker']}</b> [{c['direction']}] {c['stars']} [{c['status_flag']}]\n"
+                                f"  🌊 Gross: {c['gross_flow']} ({c['net_flow']})\n"
+                                f"  🧩 Legs: {legs_str}{warn_str}"
+                            )
+                        camp_text = "\n\n".join(camp_lines) if camp_lines else "No active campaigns."
+                        
+                        pcr_str = " | ".join([f"{p['index']}: <b>{p['pcr']}</b>" for p in pcr_watch[:4]])
+                        
+                        message = (
+                            f"🇮🇳 <b>MID-MARKET OPTIONS FLOW & TAPE INTEL (NSE)</b>\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📊 <b>Market Verdict:</b> {v.get('emoji', '⚖️')} <b>{v.get('verdict', 'NEUTRAL')}</b>\n"
+                            f"💡 <b>Rationale:</b> {v.get('reason', '')}\n"
+                            f"💸 <b>FII Net:</b> ₹{fii_net_val:,.2f} Cr ({fii_status}) | 🏦 <b>DII Net:</b> ₹{dii_net_val:,.2f} Cr ({dii_status})\n"
+                            f"⏳ <b>F&O Expiry:</b> <b>{fno_days}</b> days remaining\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🔥 <b>TOP GRADED OPTIONS SIGNALS</b>\n"
+                            f"{sig_text}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🐋 <b>INSTITUTIONAL CAMPAIGNS</b>\n"
+                            f"{camp_text}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"📊 <b>INDEX PCR WATCH</b>\n"
+                            f"{pcr_str}\n"
+                            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                            f"🤖 <i>Powered by Indian Market Intelligence Engine</i>"
+                        )
+                        
+                        await broadcast_message(bot, message, parse_mode="HTML")
+                        state.record_message("indian_midmarket_intel")
+                    except Exception as e:
+                        print(f"[INDIAN] Intel broadcast failed: {e}")
+
             # Market Close Graded Flags Report (at 3:30 - 3:45 PM IST)
             if ist_now.weekday() < 5 and ist_now.hour == 15 and 30 <= ist_now.minute <= 45:
                 if state.can_send_message("indian_market_close_flags", 80000): # at most once a day
