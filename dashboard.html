@@ -330,7 +330,7 @@
             cursor: pointer;
             font-size: 0.85rem;
             font-weight: 600;
-            color: var(--text-muted);
+            color: var(--text-color);
             transition: all 0.2s ease;
         }
 
@@ -359,19 +359,20 @@
         }
 
         .signal-card {
-            background: rgba(15, 20, 35, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
             border-radius: 24px;
             padding: 1.8rem;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
             display: flex;
             flex-direction: column;
             gap: 1.4rem;
             position: relative;
             overflow: hidden;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            color: var(--text-color);
         }
         
         .signal-card:hover {
@@ -1626,7 +1627,7 @@
                             <span>CONFIDENCE LEVEL</span>
                             <span>${sig.confidence || 80}%</span>
                         </div>
-                        <div style="height: 6px; background: rgba(255, 255, 255, 0.05); border-radius: 3px; overflow: hidden;">
+                        <div style="height: 6px; background: var(--card-border); border-radius: 3px; overflow: hidden;">
                             <div style="height: 100%; background: linear-gradient(90deg, var(--neon-accent), #a855f7); width: ${sig.confidence || 80}%;"></div>
                         </div>
                     </div>
@@ -2128,9 +2129,9 @@
                         </div>
                         <div style="font-size:0.92rem; font-weight:600; margin-bottom:0.75rem;">${sig.headline}</div>
                         <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
-                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;">${sig.flow_cr}</span>
-                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem;">${sig.time}</span>
-                            <span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700; color:var(--secondary-accent);">Score ${sig.score}</span>
+                            <span style="background:var(--card-border); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700;">${sig.flow_cr}</span>
+                            <span style="background:var(--card-border); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem;">${sig.time}</span>
+                            <span style="background:var(--card-border); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:700; color:var(--secondary-accent);">Score ${sig.score}</span>
                         </div>
                         <details style="border-top:1px solid var(--card-border); padding-top:0.6rem; margin-top:0.4rem;">
                             <summary style="font-size:0.78rem; font-weight:800; letter-spacing:0.06em; color:var(--text-muted); cursor:pointer; text-transform:uppercase;">WHAT THE EVIDENCE SHOWS</summary>
@@ -2148,7 +2149,7 @@
                     const mainColor = isBull ? 'var(--gain)' : 'var(--loss)';
                     const flagColor = c.flag_color === 'green' ? 'var(--gain)' : (c.flag_color === 'red' ? 'var(--loss)' : '#f59e0b');
 
-                    let legsHtml = (c.legs || []).map(l => `<span style="background:rgba(255,255,255,0.06); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:600;">${l.name} ${l.amount}</span>`).join(' ');
+                    let legsHtml = (c.legs || []).map(l => `<span style="background:var(--card-border); border:1px solid var(--card-border); padding:0.2rem 0.6rem; border-radius:8px; font-size:0.78rem; font-weight:600;">${l.name} ${l.amount}</span>`).join(' ');
                     let warnHtml = c.warning ? `<div style="font-size:0.78rem; color:#f59e0b; margin-top:0.5rem;">⚠️ ${c.warning}</div>` : '';
 
                     const cCard = document.createElement('div');
@@ -2157,7 +2158,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
                             <div style="font-size:1.1rem; font-weight:800;">${c.ticker}</div>
                             <div style="display:flex; gap:0.5rem; align-items:center;">
-                                <span style="font-size:0.75rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:12px; background:rgba(255,255,255,0.08); color:${flagColor};">${c.status_flag}</span>
+                                <span style="font-size:0.75rem; font-weight:800; padding:0.2rem 0.6rem; border-radius:12px; background:var(--card-border); color:${flagColor};">${c.status_flag}</span>
                                 <span style="font-size:0.8rem; font-weight:800; color:${mainColor};">${isBull ? '↑' : '↓'} ${c.direction}</span>
                             </div>
                         </div>
@@ -2206,7 +2207,7 @@
                             <span>${p.index}</span>
                             <span style="color:${color};">${val}</span>
                         </div>
-                        <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden;">
+                        <div style="width:100%; height:6px; background:var(--card-border); border-radius:4px; overflow:hidden;">
                             <div style="width:${barWidth}%; height:100%; background:${color}; border-radius:4px;"></div>
                         </div>
                     `;
