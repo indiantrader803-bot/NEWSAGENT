@@ -1816,6 +1816,39 @@ def _call_onemin_api(prompt: str, system: str | None = None, model: str = "gpt-4
 
 
 def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode: bool = False) -> str | None:
+    import requests
+    messages: list[dict] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+
+    # 1. Try Bynara API (deepseek-v4-pro-free)
+    bynara_key = os.getenv("BYNARA_API_KEY", "sk-nry-wWqj7bgCiHuO9eKsKXC5PcytwpCAt4kmAUbM6ol70uA")
+    if bynara_key:
+        payload = {
+            "model": "deepseek-v4-pro-free",
+            "messages": messages
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = requests.post(
+                "https://router.bynara.id/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {bynara_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=25,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                if "choices" in data and len(data["choices"]) > 0:
+                    return data["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            print(f"[BYNARA] Error: {e}")
+
+    # 2. Try OneMin API
     onemin_key = os.getenv("ONEMIN_API_KEY", "").strip()
     if onemin_key:
         for m in ["gpt-4o", "deepseek-chat", "gpt-4o-mini"]:
@@ -1823,13 +1856,9 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
             if res:
                 return res
 
+    # 3. Try Groq API
     if not ANALYZER_GROQ_API_KEY:
         return None
-    import requests
-    messages: list[dict] = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
 
     models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
     for m in models_to_try:
@@ -2704,7 +2733,7 @@ def _price_str(val: float, pair: str) -> str:
 
 
 def _calc_percentage_levels(price: float, is_buy: bool,
-                            tp1_pct: float = 1.0, tp2_pct: float = 2.0,
+                            tp1_pct: float = 2.5, tp2_pct: float = 5.0,
                             sl_pct: float = 0.5) -> tuple[float, float, float, float]:
     entry = round(price, 2)
     tp1 = round(price * (1 + tp1_pct / 100) if is_buy else price * (1 - tp1_pct / 100), 2)
@@ -2772,9 +2801,9 @@ def format_high_impact_alert(
                 is_buy = (direction == "Bullish") == (multiplier > 0)
                 dir_label = "BUY" if is_buy else "SELL"
                 e  = round(price, 4)
-                t1 = round(price + 30 * pip_size if is_buy else price - 30 * pip_size, 4)
-                t2 = round(price + 50 * pip_size if is_buy else price - 50 * pip_size, 4)
-                s  = round(price - 20 * pip_size if is_buy else price + 20 * pip_size, 4)
+                t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 4)
+                t2 = round(price + 150 * pip_size if is_buy else price - 150 * pip_size, 4)
+                s  = round(price - 15 * pip_size if is_buy else price + 15 * pip_size, 4)
                 reward = abs(t2 - e)
                 risk   = abs(s - e)
                 rr_str = f"{reward / risk:.1f}" if risk > 0 else "?"
@@ -2955,9 +2984,9 @@ def format_forex_message(article: dict[str, Any]) -> str:
                 direction_label = "BUY" if is_buy else "SELL"
                 dir_icon  = "🟢 BUY" if is_buy else "🔴 SELL"
                 e  = round(price, 4)
-                t1 = round(price + 30 * pip_size if is_buy else price - 30 * pip_size, 4)
-                t2 = round(price + 50 * pip_size if is_buy else price - 50 * pip_size, 4)
-                s  = round(price - 20 * pip_size if is_buy else price + 20 * pip_size, 4)
+                t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 4)
+                t2 = round(price + 150 * pip_size if is_buy else price - 150 * pip_size, 4)
+                s  = round(price - 15 * pip_size if is_buy else price + 15 * pip_size, 4)
                 reward = abs(t2 - e)
                 risk   = abs(s - e)
                 rr_str = f"{reward / risk:.1f}" if risk > 0 else "?"
@@ -3083,9 +3112,9 @@ def format_india_message(article: dict[str, Any]) -> str:
                 e, t1, t2, s = _calc_percentage_levels(price, is_buy)
             else:
                 e = round(price, 2)
-                t1 = round(price + 30 * pip_size if is_buy else price - 30 * pip_size, 2)
-                t2 = round(price + 50 * pip_size if is_buy else price - 50 * pip_size, 2)
-                s  = round(price - 20 * pip_size if is_buy else price + 20 * pip_size, 2)
+                t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 2)
+                t2 = round(price + 150 * pip_size if is_buy else price - 150 * pip_size, 2)
+                s  = round(price - 15 * pip_size if is_buy else price + 15 * pip_size, 2)
             entry_str = _price_str(e, pair)
             sl_str    = _price_str(s, pair)
             tp1_str   = _price_str(t1, pair)
@@ -3230,9 +3259,9 @@ def format_intraday_message(article: dict[str, Any]) -> str:
                 e, t1, t2, s = _calc_percentage_levels(price, is_buy)
             else:
                 e = round(price, 2)
-                t1 = round(price + 30 * pip_size if is_buy else price - 30 * pip_size, 2)
-                t2 = round(price + 50 * pip_size if is_buy else price - 50 * pip_size, 2)
-                s  = round(price - 20 * pip_size if is_buy else price + 20 * pip_size, 2)
+                t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 2)
+                t2 = round(price + 150 * pip_size if is_buy else price - 150 * pip_size, 2)
+                s  = round(price - 15 * pip_size if is_buy else price + 15 * pip_size, 2)
             entry_str = _price_str(e, pair)
             sl_str    = _price_str(s, pair)
             tp1_str   = _price_str(t1, pair)
