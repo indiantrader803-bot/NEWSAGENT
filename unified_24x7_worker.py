@@ -242,7 +242,7 @@ async def monitor_indian_market(bot: Bot):
             
 
             # Intraday Hourly Nifty & Stock Options Alert (between 10:00 AM and 3:00 PM IST, at the top of the hour)
-            if ist_now.weekday() < 5 and 10 <= ist_now.hour <= 15 and 0 <= ist_now.minute <= 5:
+            if ist_now.weekday() < 5 and 10 <= ist_now.hour <= 15:
                 if state.can_send_message(f"indian_hourly_nifty_{ist_now.hour}", 3500): # Once per hour
                     try:
                         print(f"[INDIAN] Running Hourly Nifty Options scan for {ist_now.hour}:00...")

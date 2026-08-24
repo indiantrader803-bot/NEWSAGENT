@@ -13,3 +13,5 @@ reportlab
 matplotlib
 pyautogen
 finrobot
+
+deep-translator==1.11.4

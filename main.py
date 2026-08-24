@@ -56,7 +56,7 @@ if not LIVE_NEWS_FEEDS:
     ]
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
 TWITTER_USERNAMES = [item.strip() for item in os.getenv("TWITTER_USERNAMES", "reuters,investingcom,fxstreet,stocktwits,benzinga").split(",") if item.strip()]
-TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "forex OR crypto OR stocks OR nse site:twitter.com").strip()
+TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "trump OR forex OR crypto OR stocks OR nse site:twitter.com").strip()
 
 import sys
 _is_testing = "unittest" in sys.modules or "pytest" in sys.modules
@@ -2943,8 +2943,28 @@ def _style_label(k: str, v: str, w: int = 14) -> str:
     return f"`{k:<{w}}` {v}"
 
 
+
+def _translate_to_bengali(text: str) -> str:
+    if not text:
+        return ""
+    try:
+        from deep_translator import GoogleTranslator
+        return GoogleTranslator(source='auto', target='bn').translate(text)
+    except Exception as e:
+        print(f"[TRANSLATE ERROR] {e}")
+        return text
+
 def format_forex_message(article: dict[str, Any]) -> str:
     """Template 1 — Forex/Crypto trade signal or news alert."""
+
+    # For Twitter news, translate description to Bengali
+    if source.lower() == "twitter":
+        desc = article.get("description", "")
+        if desc:
+            bengali_desc = _translate_to_bengali(desc)
+            text_body = bengali_desc + "\n\n(Original: " + desc + ")"
+            article["description"] = text_body  # Update for the rest of the flow
+
     title     = _strip_md(article.get("title") or "Market Update")
     source    = _strip_md(article.get("source_name") or "")
     published = _strip_md(article.get("pubDate") or "")
@@ -3065,6 +3085,13 @@ def format_forex_message(article: dict[str, Any]) -> str:
 
 def format_india_message(article: dict[str, Any]) -> str:
     """Template 3 — India/NSE market signal."""
+
+    # Translate Indian news description to Bengali
+    desc = article.get("description", "")
+    if desc:
+        bengali_desc = _translate_to_bengali(desc)
+        article["description"] = bengali_desc + "\n\n(Original: " + desc + ")"
+
     title     = _strip_md(article.get("title") or "India Market Update")
     source    = _strip_md(article.get("source_name") or "")
     published = _strip_md(article.get("pubDate") or "")
