@@ -565,16 +565,15 @@ async def monitor_us_market(bot: Bot):
 is_forex_first_run = True
 
 async def monitor_forex_signals(bot: Bot):
-    """Generate and send forex trading signals."""
+    """Generate and send trading signals and news 24/7."""
     global is_forex_first_run
     category = "forex_signals"
     
     while True:
         try:
-            sessions = get_current_market_session()
-            
-            if sessions["forex"] and (is_forex_first_run or state.can_send_message(category, FOREX_SIGNAL_INTERVAL)):
-                # Run main forex signal generation cycle
+            # News happens 24/7 (Crypto, Geopolitics, Trump tweets), so run continuously!
+            if is_forex_first_run or state.can_send_message(category, FOREX_SIGNAL_INTERVAL):
+                # Run main signal and news generation cycle
                 seen_keys = main.load_seen_keys()
                 sent = await main.run_worker_cycle(bot, seen_keys, silent_init=is_forex_first_run)
                 main.save_seen_keys(seen_keys)
@@ -586,7 +585,7 @@ async def monitor_forex_signals(bot: Bot):
                     state.record_message(category)
                     print(f"[FOREX/NEWS] Sent {sent} signals")
             
-            await asyncio.sleep(CHECK_INTERVAL_FAST if sessions["forex"] else CHECK_INTERVAL_SLOW)
+            await asyncio.sleep(CHECK_INTERVAL_FAST)
             
         except Exception as e:
             print(f"[FOREX] Monitor error: {e}")
