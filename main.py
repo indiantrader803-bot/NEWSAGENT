@@ -4770,6 +4770,20 @@ async def handle_health_check(reader, writer):
         return
 
 
+
+    elif path_only == "/api/smc-matrix":
+        try:
+            symbols_param = query_params.get("symbols", ["^NSEI, XAUUSD=X, EURUSD=X"])[0]
+            symbols_list = [s.strip() for s in symbols_param.split(",") if s.strip()]
+            
+            import smc_matrix
+            results = smc_matrix.scan_smc(symbols_list)
+            response_body = json.dumps(results)
+            content_type = "application/json"
+        except Exception as e:
+            response_body = json.dumps({"error": str(e)})
+            content_type = "application/json"
+
     if path_only == "/api/signals":
         signals = load_signal_log()
         if len(signals) < 15:
