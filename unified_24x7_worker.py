@@ -257,12 +257,7 @@ async def monitor_indian_market(bot: Bot):
                         
                         nifty_msg = ""
                         if nifty_lines:
-                            nifty_msg = "dY"- *LIVE HOURLY NIFTY OPTION SETUP*
-
-" + "
-".join(nifty_lines[:3]) + "
-
-_Market internals suggest momentum in these zones._"
+                            nifty_msg = "📉 *LIVE HOURLY NIFTY OPTION SETUP*\\n\\n" + "\\n".join(nifty_lines[:3]) + "\\n\\n_Market internals suggest momentum in these zones._"
                         
                         # 2. Stock Options
                         candidates = iscoring.scan_breakout_candidates("NSE")
@@ -282,20 +277,18 @@ _Market internals suggest momentum in these zones._"
                             option = stock_c.get("option_contract", f"{ticker} CE/PE")
                             premium = stock_c.get("option_premium", "10-20")
                             
-                            stock_msg = f"dY' *LIVE HOURLY STOCK OPTION SIGNAL*
-
-"                                         f"dY" Asset: *{ticker}*
-"                                         f"dY"S Status: {status}
-"                                         f"dY"- Contract: *{option}*
-"                                         f",1 Entry Premium: {premium}
-"                                         f"
-_Automated Intraday Scan - Trade with strict risk management!_"
+                            stock_msg = (
+                                f"📉 *LIVE HOURLY STOCK OPTION SIGNAL*\\n\\n"
+                                f"📌 Asset: *{ticker}*\\n"
+                                f"🔍 Status: {status}\\n"
+                                f"⚡ Contract: *{option}*\\n"
+                                f"💵 Entry Premium: {premium}\\n\\n"
+                                f"_Automated Intraday Scan - Trade with strict risk management!_"
+                            )
                         
                         final_msg = ""
                         if nifty_msg and stock_msg:
-                            final_msg = nifty_msg + "
-
-" + stock_msg
+                            final_msg = nifty_msg + "\\n\\n" + stock_msg
                         elif nifty_msg:
                             final_msg = nifty_msg
                         elif stock_msg:
@@ -569,23 +562,29 @@ async def monitor_us_market(bot: Bot):
             await asyncio.sleep(60)
 
 
+is_forex_first_run = True
+
 async def monitor_forex_signals(bot: Bot):
     """Generate and send forex trading signals."""
+    global is_forex_first_run
     category = "forex_signals"
     
     while True:
         try:
             sessions = get_current_market_session()
             
-            if sessions["forex"] and state.can_send_message(category, FOREX_SIGNAL_INTERVAL):
+            if sessions["forex"] and (is_forex_first_run or state.can_send_message(category, FOREX_SIGNAL_INTERVAL)):
                 # Run main forex signal generation cycle
                 seen_keys = main.load_seen_keys()
-                sent = await main.run_worker_cycle(bot, seen_keys)
+                sent = await main.run_worker_cycle(bot, seen_keys, silent_init=is_forex_first_run)
                 main.save_seen_keys(seen_keys)
                 
-                if sent > 0:
+                if is_forex_first_run:
+                    is_forex_first_run = False
+                    print("[NEWS WORKER] Initial silent run complete. Old messages ignored.")
+                elif sent > 0:
                     state.record_message(category)
-                    print(f"[FOREX] Sent {sent} signals")
+                    print(f"[FOREX/NEWS] Sent {sent} signals")
             
             await asyncio.sleep(CHECK_INTERVAL_FAST if sessions["forex"] else CHECK_INTERVAL_SLOW)
             

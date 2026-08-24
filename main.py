@@ -3720,6 +3720,7 @@ async def send_category_article(
     seen_keys: set[str],
     category_prefix: str,
     format_func: Any,
+    silent_init: bool = False,
 ) -> int:
     for article in articles:
         key = article_key(article)
@@ -3731,13 +3732,19 @@ async def send_category_article(
         if not is_recent(article):
             continue
 
-        # Deduplicate similar/repeated titles using word-order-invariant hashes
+                # Deduplicate similar/repeated titles using word-order-invariant hashes
         title = article.get("title") or ""
         title_norm = clean_title_for_dedup(title)
         if title_norm:
             title_key = f"title:{title_norm}"
             if title_key in seen_keys:
                 continue
+                
+        if silent_init:
+            seen_keys.add(full_key)
+            if title_norm:
+                seen_keys.add(title_key)
+            continue
 
         # Filter out weak/medium analysis for regular category messages (Must be High confidence and directional)
         bias = infer_bias_signal(article)
@@ -3846,14 +3853,14 @@ async def send_institutional_signals(bot: Bot, seen_keys: set[str]) -> int:
     return sent
 
 
-async def run_worker_cycle(bot: Bot, seen_keys: set[str]) -> int:
+async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = False) -> int:
     total_sent = 0
 
     try:
         forex_articles = fetch_latest_articles(FOREX_QUERY)
         total_sent += await send_category_article(
             bot, forex_articles, seen_keys,
-            "forex", format_forex_message,
+            "forex", format_forex_message, silent_init
         )
     except Exception as exc:
         print(f"[ERROR] Forex category failed in cycle: {exc}")
@@ -3862,7 +3869,7 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str]) -> int:
         india_articles = fetch_latest_articles(INDIA_MARKET_QUERY)
         total_sent += await send_category_article(
             bot, india_articles, seen_keys,
-            "india", format_india_message,
+            "india", format_india_message, silent_init
         )
     except Exception as exc:
         print(f"[ERROR] India category failed in cycle: {exc}")
@@ -3871,7 +3878,7 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str]) -> int:
         intraday_articles = fetch_latest_articles(INTRADAY_STOCK_QUERY)
         total_sent += await send_category_article(
             bot, intraday_articles, seen_keys,
-            "intraday", format_intraday_message,
+            "intraday", format_intraday_message, silent_init
         )
     except Exception as exc:
         print(f"[ERROR] Intraday category failed in cycle: {exc}")
