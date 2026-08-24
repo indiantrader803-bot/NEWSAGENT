@@ -937,7 +937,7 @@
                 🛠️ Trading Toolkit
             </li>
             <li class="nav-item" onclick="switchPage('page-btc-lottery', this)">
-                ?? BTC Lottery Miner
+                🎰 BTC Lottery Miner
             </li>
         </ul>
 
@@ -1537,13 +1537,10 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-
-        <!-- BTC LOTTERY MINER PAGE -->
+<!-- BTC LOTTERY MINER PAGE -->
         <div id="page-btc-lottery" class="page-panel">
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">?? Bitcoin Lottery Miner (Solo Mining Simulator)</h2>
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">🎰 Bitcoin Lottery Miner (Solo Mining Simulator)</h2>
 
             <div class="analyzer-box">
                 <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5;">
@@ -1564,7 +1561,7 @@
                     </div>
                 </div>
                 <button class="btn-analyze" id="btn-start-miner" onclick="startBTCMiner()" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px; font-size:1rem; padding: 12px;">
-                    <span>?? Start Solo Mining</span>
+                    <span>⛏️ Start Solo Mining</span>
                 </button>
             </div>
 
@@ -1595,6 +1592,11 @@
                 </div>
             </div>
         </div>
+        </div>
+    </div>
+
+
+        
 
     <script>
         let currentTab = 'ALL';
@@ -3350,11 +3352,11 @@
             const terminal = document.getElementById('miner-terminal');
             const btn = document.getElementById('btn-start-miner');
             isMining = false;
-            btn.innerHTML = '<span>?? Start Solo Mining</span>';
+            btn.innerHTML = '<span>⛏️ Start Solo Mining</span>';
             btn.style.background = '';
             
             if (!winnerFound) {
-                terminal.innerHTML += `<br><span style="color: #ff5555;">? Time's up! No block found matching difficulty ${difficulty}.</span><br>`;
+                terminal.innerHTML += `<br><span style="color: #ff5555;"? Time's up! No block found matching difficulty ${difficulty}.</span><br>`;
                 terminal.innerHTML += `> Try lowering the difficulty or increasing the duration.<br>`;
             }
             terminal.scrollTop = terminal.scrollHeight;
