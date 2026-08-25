@@ -25,6 +25,23 @@ Architecture:
 """
 
 import asyncio
+
+import time
+last_alert_time = 0
+async def send_admin_alert(bot, error_message):
+    global last_alert_time
+    now = time.time()
+    if now - last_alert_time > 3600: # Max 1 alert per hour
+        last_alert_time = now
+        alert_msg = f"?? *SYSTEM ALERT*
+Error detected in 24/7 Engine:
+`{str(error_message)[:200]}`"
+        try:
+            from send_signal_now import broadcast_message
+            await broadcast_message(bot, alert_msg)
+        except:
+            pass
+
 import json
 import os
 import threading
@@ -565,7 +582,7 @@ async def monitor_indian_market(bot: Bot):
             await asyncio.sleep(sleep_time)
             
         except Exception as e:
-            print(f"[INDIAN] Monitor error: {e}")
+            print(f"[INDIAN] Monitor error: {e}"); await send_admin_alert(bot, f"[INDIAN] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -601,7 +618,7 @@ async def monitor_us_market(bot: Bot):
             await asyncio.sleep(sleep_time)
             
         except Exception as e:
-            print(f"[US] Monitor error: {e}")
+            print(f"[US] Monitor error: {e}"); await send_admin_alert(bot, f"[US] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -641,7 +658,7 @@ async def monitor_forex_signals(bot: Bot):
             await asyncio.sleep(CHECK_INTERVAL_FAST)
             
         except Exception as e:
-            print(f"[FOREX] Monitor error: {e}")
+            print(f"[FOREX] Monitor error: {e}"); await send_admin_alert(bot, f"[FOREX] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -672,7 +689,7 @@ async def monitor_crypto_market(bot: Bot):
             await asyncio.sleep(CRYPTO_CHECK_INTERVAL)
             
         except Exception as e:
-            print(f"[CRYPTO] Monitor error: {e}")
+            print(f"[CRYPTO] Monitor error: {e}"); await send_admin_alert(bot, f"[CRYPTO] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -713,7 +730,7 @@ async def monitor_commodities(bot: Bot):
             await asyncio.sleep(CHECK_INTERVAL_SLOW)
             
         except Exception as e:
-            print(f"[COMMODITIES] Monitor error: {e}")
+            print(f"[COMMODITIES] Monitor error: {e}"); await send_admin_alert(bot, f"[COMMODITIES] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -753,7 +770,7 @@ async def monitor_realtime_alerts(bot: Bot):
   # Check every minute
             
         except Exception as e:
-            print(f"[REALTIME] Monitor error: {e}")
+            print(f"[REALTIME] Monitor error: {e}"); await send_admin_alert(bot, f"[REALTIME] {e}")
             await asyncio.sleep(60)
 
         # Keep-Alive Self Ping for Render Free Tier
@@ -806,7 +823,7 @@ async def send_market_briefing(bot: Bot):
             await asyncio.sleep(600)
             
         except Exception as e:
-            print(f"[BRIEFING] Error: {e}")
+            print(f"[BRIEFING] Error: {e}"); await send_admin_alert(bot, f"[BRIEFING] {e}")
             await asyncio.sleep(600)
 
 
@@ -839,7 +856,7 @@ async def run_24x7_worker():
                         status = resp.status
                         print(f"[PING] Kept UI awake (Status: {status})")
             except Exception as e:
-                print(f"[PING] Error: {e}")
+                print(f"[PING] Error: {e}"); await send_admin_alert(bot, f"[PING] {e}")
             await asyncio.sleep(600)  # Ping every 10 minutes
 
     # Create all monitoring tasks

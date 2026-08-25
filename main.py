@@ -1,4 +1,16 @@
 import asyncio
+
+import time
+_last_main_alert = 0
+async def _send_main_alert(bot, msg):
+    global _last_main_alert
+    now = time.time()
+    if now - _last_main_alert > 3600:
+        _last_main_alert = now
+        try:
+            await send_telegram_message(bot, f"?? *API/CYCLE ERROR*
+`{msg[:200]}`", parse_mode="Markdown")
+        except: pass
 import json
 import time
 
@@ -59,7 +71,7 @@ if not LIVE_NEWS_FEEDS:
     ]
 TWITTER_BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "").strip()
 TWITTER_USERNAMES = [item.strip() for item in os.getenv("TWITTER_USERNAMES", "reuters,investingcom,fxstreet,stocktwits,benzinga").split(",") if item.strip()]
-TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "trump OR forex OR crypto OR stocks OR nse site:twitter.com").strip()
+TWITTER_SEARCH_QUERY = os.getenv("TWITTER_SEARCH_QUERY", "nifty OR banknifty OR sensex OR forex OR crypto OR stocks OR nse site:twitter.com").strip()
 
 import sys
 _is_testing = "unittest" in sys.modules or "pytest" in sys.modules
@@ -89,8 +101,8 @@ FOREX_QUERY = os.getenv(
 
 INDIA_MARKET_QUERY = os.getenv(
     "INDIA_MARKET_QUERY",
-    '(sensex OR nifty OR "indian market" OR "india stock" OR "bse" OR "nse" OR '
-    '"rbi" OR "rupee" OR "sebi" OR "indian economy") AND (india OR mumbai)',
+    '(sensex OR nifty OR banknifty OR finnifty OR "indian market" OR "india stock" OR "bse" OR "nse" OR '
+    '"rbi" OR "rupee" OR "sebi" OR "indian economy" OR "stock options" OR "nifty options") AND (india OR mumbai)',
 )
 
 INTRADAY_STOCK_QUERY = os.getenv(
@@ -3866,7 +3878,7 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = Fa
             "forex", format_forex_message, silent_init
         )
     except Exception as exc:
-        print(f"[ERROR] Forex category failed in cycle: {exc}")
+        print(f"[ERROR] Forex category failed in cycle: {exc}"); await _send_main_alert(bot, f"Forex category failed: {exc}")
 
     try:
         india_articles = fetch_latest_articles(INDIA_MARKET_QUERY)
@@ -3875,7 +3887,7 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = Fa
             "india", format_india_message, silent_init
         )
     except Exception as exc:
-        print(f"[ERROR] India category failed in cycle: {exc}")
+        print(f"[ERROR] India category failed in cycle: {exc}"); await _send_main_alert(bot, f"India category failed: {exc}")
 
     try:
         intraday_articles = fetch_latest_articles(INTRADAY_STOCK_QUERY)
@@ -3884,17 +3896,17 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = Fa
             "intraday", format_intraday_message, silent_init
         )
     except Exception as exc:
-        print(f"[ERROR] Intraday category failed in cycle: {exc}")
+        print(f"[ERROR] Intraday category failed in cycle: {exc}"); await _send_main_alert(bot, f"Intraday category failed: {exc}")
 
     try:
         total_sent += await send_options_suggestion(bot, seen_keys)
     except Exception as exc:
-        print(f"[ERROR] Options suggestions failed in cycle: {exc}")
+        print(f"[ERROR] Options suggestions failed in cycle: {exc}"); await _send_main_alert(bot, f"Options suggestions failed: {exc}")
 
     try:
         total_sent += await send_institutional_signals(bot, seen_keys)
     except Exception as exc:
-        print(f"[ERROR] Institutional signals failed in cycle: {exc}")
+        print(f"[ERROR] Institutional signals failed in cycle: {exc}"); await _send_main_alert(bot, f"Institutional signals failed: {exc}")
 
     return total_sent
 
