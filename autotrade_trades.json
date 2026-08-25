@@ -36,5 +36,68 @@
       }
     ],
     "timestamp": "2026-08-10T13:49:17.254562+00:00"
+  },
+  {
+    "pair": "EUR/USD",
+    "side": "buy",
+    "entry": 1.0,
+    "tp1": 1.1,
+    "tp2": 1.2,
+    "sl": 0.99,
+    "units": 1000.0,
+    "results": [
+      {
+        "id": "d4348bd5-e832-45ce-a09e-2a2fa8d5fc41",
+        "status": "simulated",
+        "pair": "EUR/USD",
+        "side": "buy",
+        "units": 500.0,
+        "entry": 1.0,
+        "tp": 1.1,
+        "tp2": null,
+        "sl": 0.99,
+        "timestamp": 1786372198,
+        "leverage": 1.0
+      },
+      {
+        "id": "a8df845d-4277-42d9-a34e-fd053bffcea6",
+        "status": "simulated",
+        "pair": "EUR/USD",
+        "side": "buy",
+        "units": 500.0,
+        "entry": 1.0,
+        "tp": 1.2,
+        "tp2": 1.2,
+        "sl": 0.99,
+        "timestamp": 1786372198,
+        "leverage": 1.0
+      }
+    ],
+    "timestamp": "2026-08-10T14:29:58.069698+00:00"
+  },
+  {
+    "pair": "EUR/USD",
+    "side": "buy",
+    "entry": 1.0,
+    "tp1": 1.1,
+    "tp2": null,
+    "sl": 0.99,
+    "units": 100.0,
+    "results": [
+      {
+        "id": "26852603-a30d-4e6f-8b35-d64312868f10",
+        "status": "simulated",
+        "pair": "EUR/USD",
+        "side": "buy",
+        "units": 100.0,
+        "entry": 1.0,
+        "tp": 1.1,
+        "tp2": null,
+        "sl": 0.99,
+        "timestamp": 1786372356,
+        "leverage": 1.0
+      }
+    ],
+    "timestamp": "2026-08-10T14:32:36.633309+00:00"
   }
 ]

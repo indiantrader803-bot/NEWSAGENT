@@ -38,3 +38,14 @@ class DummyBroker(BrokerBase):
         except Exception:
             pass
         return resp
+
+    def get_order_status(self, order: dict) -> Dict[str, Any]:
+        # Simulate order progression: if created more than 1 second ago, mark as filled
+        try:
+            created = int(order.get("timestamp", 0))
+            now = int(time.time())
+            if now - created > 1:
+                return {"id": order.get("id"), "status": "filled", "filled_price": order.get("entry"), "filled_units": order.get("units")}
+        except Exception:
+            pass
+        return {"id": order.get("id"), "status": order.get("status", "simulated")}

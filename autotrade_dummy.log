@@ -1,2 +1,5 @@
 {'id': '5bfdbe8a-000c-485f-840e-9ff405ca438b', 'status': 'simulated', 'pair': 'EUR/USD', 'side': 'buy', 'units': 500.0, 'entry': 1.0, 'tp': 1.1, 'tp2': None, 'sl': 0.99, 'timestamp': 1786369757, 'leverage': 1.0}
 {'id': '75164abe-8d1d-4c6a-8413-0b3522b0a82a', 'status': 'simulated', 'pair': 'EUR/USD', 'side': 'buy', 'units': 500.0, 'entry': 1.0, 'tp': 1.2, 'tp2': 1.2, 'sl': 0.99, 'timestamp': 1786369757, 'leverage': 1.0}
+{'id': 'd4348bd5-e832-45ce-a09e-2a2fa8d5fc41', 'status': 'simulated', 'pair': 'EUR/USD', 'side': 'buy', 'units': 500.0, 'entry': 1.0, 'tp': 1.1, 'tp2': None, 'sl': 0.99, 'timestamp': 1786372198, 'leverage': 1.0}
+{'id': 'a8df845d-4277-42d9-a34e-fd053bffcea6', 'status': 'simulated', 'pair': 'EUR/USD', 'side': 'buy', 'units': 500.0, 'entry': 1.0, 'tp': 1.2, 'tp2': 1.2, 'sl': 0.99, 'timestamp': 1786372198, 'leverage': 1.0}
+{'id': '26852603-a30d-4e6f-8b35-d64312868f10', 'status': 'simulated', 'pair': 'EUR/USD', 'side': 'buy', 'units': 100.0, 'entry': 1.0, 'tp': 1.1, 'tp2': None, 'sl': 0.99, 'timestamp': 1786372356, 'leverage': 1.0}
