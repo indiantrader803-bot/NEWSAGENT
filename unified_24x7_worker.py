@@ -569,6 +569,16 @@ async def monitor_indian_market(bot: Bot):
             print(f"[INDIAN] Monitor error: {e}")
             await asyncio.sleep(60)
 
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
+
 
 async def monitor_us_market(bot: Bot):
     """Monitor US stock market during trading hours."""
@@ -594,6 +604,16 @@ async def monitor_us_market(bot: Bot):
         except Exception as e:
             print(f"[US] Monitor error: {e}")
             await asyncio.sleep(60)
+
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
 
 
 is_forex_first_run = True
@@ -625,6 +645,16 @@ async def monitor_forex_signals(bot: Bot):
             print(f"[FOREX] Monitor error: {e}")
             await asyncio.sleep(60)
 
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
+
 
 async def monitor_crypto_market(bot: Bot):
     """Monitor cryptocurrency market 24/7."""
@@ -645,6 +675,16 @@ async def monitor_crypto_market(bot: Bot):
         except Exception as e:
             print(f"[CRYPTO] Monitor error: {e}")
             await asyncio.sleep(60)
+
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
 
 
 async def monitor_commodities(bot: Bot):
@@ -677,6 +717,16 @@ async def monitor_commodities(bot: Bot):
             print(f"[COMMODITIES] Monitor error: {e}")
             await asyncio.sleep(60)
 
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
+
 
 async def monitor_realtime_alerts(bot: Bot):
     """Monitor real-time market alerts (VIX spikes, crashes, etc.)."""
@@ -691,11 +741,31 @@ async def monitor_realtime_alerts(bot: Bot):
                 state.record_message(category)
                 print(f"[REALTIME] Sent {alert_count} alerts")
             
-            await asyncio.sleep(60)  # Check every minute
+            await asyncio.sleep(60)
+
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+  # Check every minute
             
         except Exception as e:
             print(f"[REALTIME] Monitor error: {e}")
             await asyncio.sleep(60)
+
+        # Keep-Alive Self Ping for Render Free Tier
+        # This forces the Render router to see external traffic and prevents the web service from sleeping.
+        if int(time.time()) % 600 < 60: # Every ~10 minutes
+            try:
+                import requests
+                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
+            except:
+                pass
+
 
 
 async def send_market_briefing(bot: Bot):

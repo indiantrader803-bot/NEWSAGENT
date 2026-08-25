@@ -5186,6 +5186,12 @@ async def handle_health_check(reader, writer):
                 sensex_lines.append(f"• <b>{s['strike']}</b> ({s['expiry']}) ➔ <b>{s['oi_change']}</b> [{s['sentiment']}]")
             sensex_text = "\n".join(sensex_lines) if sensex_lines else "No active Sensex OI buildup."
 
+            bankex_lines = []
+            for s in report.get("bankex_oi", []):
+                bankex_lines.append(f"?? <b>{s['strike']}</b> ({s['expiry']}) ? <b>{s['oi_change']}</b> [{s['sentiment']}]")
+            bankex_text = "\n".join(bankex_lines) if bankex_lines else "No active Bankex OI buildup."
+
+
             pcr_lines = []
             for p in report.get("pcr_watch", []):
                 pcr_lines.append(f"• <b>{p['index']}:</b> <b>{p['pcr']}</b> ({p['sentiment']})")
