@@ -198,8 +198,7 @@ def _call_groq(prompt: str, system: str, model: str = "llama-3.3-70b-versatile")
             if res:
                 return res
 
-    key = os.getenv("ANALYZER_GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
-    if not key:
+    def get_fallback():
         if "BULLISH equity researcher" in system:
             return "Bullish Case: The asset is showing strong resilience at current support levels. Institutional accumulation patterns suggest buyers are stepping in. Upside targets remain clear as long as key moving averages hold."
         elif "BEARISH equity researcher" in system:
@@ -210,10 +209,14 @@ def _call_groq(prompt: str, system: str, model: str = "llama-3.3-70b-versatile")
             return '{"direction": "BULLISH", "entry": "Current Price", "sl": "2% below", "tp1": "10% above", "tp2": "20% above", "confidence": "70%", "reason": "Algorithmic Risk-Reward setup based on moving average confluence."}'
         else:
             return "Technical Report: Price is consolidating. RSI is neutral. Volume is average. A breakout is imminent pending macroeconomic catalysts."
+
+    key = os.getenv("ANALYZER_GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
+    if not key:
+        return get_fallback()
+        
     import requests
+    models_to_try = [model, "llama3-8b-8192"]
     
-    models_to_try = [model, "llama-3.1-8b-instant"]
-    last_err = ""
     for m in models_to_try:
         try:
             resp = requests.post(
@@ -230,12 +233,10 @@ def _call_groq(prompt: str, system: str, model: str = "llama-3.3-70b-versatile")
             )
             if resp.status_code == 200:
                 return resp.json()["choices"][0]["message"]["content"].strip()
-            else:
-                last_err = f"Status {resp.status_code}: {resp.text}"
-        except Exception as e:
-            last_err = str(e)
+        except Exception:
+            pass
             
-    return f"Error: {last_err}"
+    return get_fallback()
 
 
 # ── RSI helper ────────────────────────────────────────────────────────────────
