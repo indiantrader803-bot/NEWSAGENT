@@ -2516,6 +2516,15 @@
                 // 1. Top Signals (Graded Live)
                 const topSigContainer = document.getElementById('intel-top-signals-list');
                 topSigContainer.innerHTML = '';
+                
+                if (!data.top_graded_signals || data.top_graded_signals.length === 0) {
+                    topSigContainer.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.9rem; background: rgba(0,0,0,0.1); border-radius: 12px; border: 1px dashed var(--card-border);">
+                        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">??????</div>
+                        <b>No High-Probability Setups Found</b><br/>
+                        The engine requires a 70%+ confidence score and strong institutional flow to generate a graded signal. Scanning market...
+                    </div>`;
+                }
+
                 (data.top_graded_signals || []).forEach(sig => {
                     const dirColor = sig.direction === 'BULLISH' ? 'var(--gain)' : 'var(--loss)';
                     const dirBg = sig.direction === 'BULLISH' ? 'rgba(0,200,83,0.12)' : 'rgba(255,61,61,0.12)';
