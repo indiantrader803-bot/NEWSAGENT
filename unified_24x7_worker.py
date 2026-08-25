@@ -268,8 +268,7 @@ async def monitor_indian_market(bot: Bot):
                                     f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
                                     f"⚠️ <i>Fast Execution Required</i>"
                                 )
-                                import asyncio
-                                asyncio.create_task(broadcast_message(bot, msg, parse_mode="HTML"))
+                                await broadcast_message(bot, msg, parse_mode="HTML")
                                 state.record_message(unique_key)
                                 print(f"[INDIAN] Live Graded Signal broadcasted: {strike}")
                     except Exception as e:

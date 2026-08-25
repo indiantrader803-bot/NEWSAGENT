@@ -408,42 +408,51 @@ def fetch_graded_top_signals(scan_results: list[dict[str, Any]]) -> list[dict[st
     graded = []
     now_time = datetime.now(timezone.utc).strftime("%H:%M")
     
-    for s in (scan_results or [])[:4]:
+    valid_scans = []
+    for s in (scan_results or []):
+        try:
+            prob_str = str(s.get("probability", "50%")).replace("%", "")
+            prob = int(prob_str)
+            if prob >= 70 or prob <= 30:
+                valid_scans.append(s)
+        except:
+            pass
+            
+    for s in valid_scans[:4]:
         ticker = s.get("ticker", "NIFTY")
         price = float(s.get("price", 1000.0))
-        score = int(s.get("score", 50))
-        rsi = float(s.get("rsi", 50.0))
+        prob_str = str(s.get("probability", "50%")).replace("%", "")
+        score = int(prob_str)
         chg = float(s.get("change_pct", 0.0))
         
         direction = "BULLISH" if score >= 60 or chg > 0 else ("BEARISH" if score <= 40 or chg < 0 else "NEUTRAL")
         opt_type = "CE" if direction == "BULLISH" else "PE"
-        strike = int(round(price / 50.0) * 50)
+        
+        if price > 10000: step = 100
+        elif price > 4000: step = 50
+        elif price > 1000: step = 20
+        elif price > 500: step = 10
+        else: step = 5
+        strike = int(round(price / step) * step)
+        
         strike_name = f"{ticker} {strike} {opt_type}"
         
         flow_value = round(max(0.5, (abs(chg) + 1.0) * (score / 35.0)), 2)
-        flow_str = f"₹{flow_value} Cr"
+        flow_str = f"INR {flow_value} Cr"
         
-        headline = f"Institutional flow detected in {ticker} options — {flow_str} committed."
+        headline = f"Institutional flow detected in {ticker} options - {flow_str} committed."
         if direction == "BULLISH":
-            headline = f"Institutional buying of ₹{flow_value} Cr in {ticker} {strike} Call options."
+            headline = f"Institutional buying of INR {flow_value} Cr in {ticker} {strike} Call options."
         elif direction == "BEARISH":
-            headline = f"Institutional put flow of ₹{flow_value} Cr recorded for {ticker} {strike} Put options."
+            headline = f"Institutional put flow of INR {flow_value} Cr recorded for {ticker} {strike} Put options."
             
-        evidence = [
-            {"text": f"Tape flow confirms {direction.lower()} bias on {ticker}", "pass": True},
-            {"text": f"RSI reading of {rsi:.1f} confirms momentum direction", "pass": rsi > 50 if direction == "BULLISH" else rsi < 50},
-            {"text": f"Scoring engine model score ({score}/100) passes threshold", "pass": score >= 55 or score <= 45},
-            {"text": "Fresh open interest position buildup verified", "pass": abs(chg) > 0.5},
-        ]
-        
         graded.append({
             "strike": strike_name,
             "direction": direction,
-            "headline": headline,
+            "score": score,
             "flow_cr": flow_str,
             "time": now_time,
-            "score": score,
-            "evidence": evidence
+            "headline": headline
         })
         
     return graded
