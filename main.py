@@ -5040,6 +5040,10 @@ async def handle_health_check(reader, writer):
                 import yfinance as yf
                 ticker = yf.Ticker(symbol)
                 hist = ticker.history(period="5d")
+                if hist.empty and "." not in symbol and "=" not in symbol and "-" not in symbol and "^" not in symbol:
+                    symbol = f"{symbol}.NS"
+                    ticker = yf.Ticker(symbol)
+                    hist = ticker.history(period="5d")
                 if hist.empty:
                     raise Exception(f"No price data found for symbol '{symbol}'")
                 current_price = float(hist["Close"].iloc[-1])
@@ -5502,6 +5506,10 @@ async def handle_health_check(reader, writer):
                 import yfinance as yf
                 tk = yf.Ticker(symbol)
                 hist = tk.history(period="5d")
+                if hist.empty and "." not in symbol and "=" not in symbol and "-" not in symbol and "^" not in symbol:
+                    symbol = f"{symbol}.NS"
+                    tk = yf.Ticker(symbol)
+                    hist = tk.history(period="5d")
                 if hist.empty:
                     raise Exception(f"No real market price data found for symbol '{symbol}' on Yahoo Finance. Please enter a valid ticker.")
                 
@@ -5654,6 +5662,10 @@ async def handle_health_check(reader, writer):
                 import yfinance as yf
                 tk = yf.Ticker(symbol)
                 hist = tk.history(period="1y")
+                if hist.empty and "." not in symbol and "=" not in symbol and "-" not in symbol and "^" not in symbol:
+                    symbol = f"{symbol}.NS"
+                    tk = yf.Ticker(symbol)
+                    hist = tk.history(period="1y")
                 if hist.empty:
                     raise Exception(f"No price data found for symbol '{symbol}' on Yahoo Finance.")
                 

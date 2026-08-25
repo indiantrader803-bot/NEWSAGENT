@@ -66,10 +66,15 @@ def scan_smc(symbols_list):
         
         try:
             tk = yf.Ticker(sym)
+            df_15m = tk.history(period="5d", interval="15m")
+            
+            if df_15m.empty and "." not in sym and "=" not in sym and "-" not in sym and "^" not in sym:
+                sym = f"{sym}.NS"
+                tk = yf.Ticker(sym)
+                df_15m = tk.history(period="5d", interval="15m")
             
             # Fetch multiple intervals
-            # 15m (last 5 days)
-            df_15m = tk.history(period="5d", interval="15m")
+            # 1h (last 1mo)
             # 1h (last 1mo)
             df_1h = tk.history(period="1mo", interval="1h")
             # 1d (last 3mo)
