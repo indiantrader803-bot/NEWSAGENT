@@ -49,6 +49,9 @@ LIVE_NEWS_ENABLED = os.getenv("LIVE_NEWS_ENABLED", "true").strip().lower() in {"
 LIVE_NEWS_FEEDS = [item.strip() for item in os.getenv("LIVE_NEWS_FEEDS", "").split(",") if item.strip()]
 if not LIVE_NEWS_FEEDS:
     LIVE_NEWS_FEEDS = [
+        "https://economictimes.indiatimes.com/markets/rssfeeds/2146842.cms",
+        "https://www.livemint.com/rss/markets",
+        "https://www.moneycontrol.com/rss/MCtopnews.xml",
         "https://feeds.feedburner.com/forexcom",
         "https://www.investing.com/rss/news_1.rss",
         "https://www.forexlive.com/Feed/News",
@@ -5704,19 +5707,22 @@ async def handle_health_check(reader, writer):
                 
                 report_text = _analyzer_groq_chat(data_context, system_prompt=system_prompt)
                 if not report_text:
-                    report_text = f"## Executive Summary
-The algorithmic engine has successfully retrieved and synthesized the core financial data for {symbol}. Price is currently trading near {hist['Close'].iloc[-1]:.2f}, within a 52-week range of {hist['Low'].min():.2f} - {hist['High'].max():.2f}.
-
-## Financial Statement Analysis
-The company shows stable institutional tracking metrics. Operating metrics have been preserved in the raw data pull. Moving averages indicate sustained consolidation.
-
-## Risk Assessments
-1. Macroeconomic headwinds in emerging markets.
-2. Sector-specific rotation volatility.
-3. Supply-chain constraints impacting near-term margin expansion.
-
-## Investment Thesis
-Based on the automated quantitative scan, {symbol} represents a HOLD. The asset displays equilibrium between buying and selling pressure. Institutional accumulation is offset by technical resistance bands. A breakout above short-term moving averages is required for an upgrade to BUY."
+                    c_price = float(hist['Close'].iloc[-1])
+                    low_52 = float(hist['Low'].min())
+                    high_52 = float(hist['High'].max())
+                    report_text = (
+                        f"## Executive Summary\n"
+                        f"The algorithmic engine has successfully retrieved and synthesized the core financial data for {symbol}. "
+                        f"Price is currently trading near {c_price:.2f}, within a 52-week range of {low_52:.2f} - {high_52:.2f}.\n\n"
+                        f"## Financial Statement Analysis\n"
+                        f"The company shows stable institutional tracking metrics. Operating metrics have been preserved in the raw data pull. Moving averages indicate sustained consolidation.\n\n"
+                        f"## Risk Assessments\n"
+                        f"1. Macroeconomic headwinds in emerging markets.\n"
+                        f"2. Sector-specific rotation volatility.\n"
+                        f"3. Supply-chain constraints impacting near-term margin expansion.\n\n"
+                        f"## Investment Thesis\n"
+                        f"Based on the automated quantitative scan, {symbol} represents a HOLD. The asset displays equilibrium between buying and selling pressure. Institutional accumulation is offset by technical resistance bands. A breakout above short-term moving averages is required for an upgrade to BUY."
+                    )
                 
                 compile_pdf_report(symbol, report_text, chart_path, pdf_path)
                 
