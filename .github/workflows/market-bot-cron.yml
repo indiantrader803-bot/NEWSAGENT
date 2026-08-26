@@ -1,0 +1,46 @@
+name: 24/7 Market Bot (Cron)
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "*/15 * * * *" # Runs every 15 minutes
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Market Cycle
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+        run: |
+          python github_cron_worker.py
+
+      - name: Commit and push state
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add sent_articles.json worker_24x7_state.json signal_log.json momentum_db.sqlite || true
+          git commit -m "chore: update bot state [skip ci]" || echo "No changes to commit"
+          git push
