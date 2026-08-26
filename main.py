@@ -1,10 +1,10 @@
 import asyncio
 
-import time
+import time as _time_module
 _last_main_alert = 0
 async def _send_main_alert(bot, msg):
     global _last_main_alert
-    now = time.time()
+    now = _time_module.time()
     if now - _last_main_alert > 3600:
         _last_main_alert = now
         try:
@@ -2971,8 +2971,9 @@ def _translate_to_bengali(text: str) -> str:
 def format_forex_message(article: dict[str, Any]) -> str:
     """Template 1 — Forex/Crypto trade signal or news alert."""
 
+    source = article.get("source_id") or article.get("source", "Unknown")
     # For Twitter news, translate description to Bengali
-    if source.lower() == "twitter":
+    if isinstance(source, str) and source.lower() == "twitter":
         desc = article.get("description", "")
         if desc:
             bengali_desc = _translate_to_bengali(desc)
