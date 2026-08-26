@@ -8,8 +8,7 @@ async def _send_main_alert(bot, msg):
     if now - _last_main_alert > 3600:
         _last_main_alert = now
         try:
-            await send_telegram_message(bot, f"?? *API/CYCLE ERROR*
-`{msg[:200]}`", parse_mode="Markdown")
+            await send_telegram_message(bot, f"?? *API/CYCLE ERROR*\n`{msg[:200]}`", parse_mode="Markdown")
         except: pass
 import json
 import time

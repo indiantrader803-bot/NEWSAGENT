@@ -31,11 +31,9 @@ last_alert_time = 0
 async def send_admin_alert(bot, error_message):
     global last_alert_time
     now = time.time()
-    if now - last_alert_time > 3600: # Max 1 alert per hour
+    if now - last_alert_time > 3600:
         last_alert_time = now
-        alert_msg = f"?? *SYSTEM ALERT*
-Error detected in 24/7 Engine:
-`{str(error_message)[:200]}`"
+        alert_msg = f"?? *SYSTEM ALERT*\nError detected in 24/7 Engine:\n`{str(error_message)[:200]}`"
         try:
             from send_signal_now import broadcast_message
             await broadcast_message(bot, alert_msg)
@@ -759,16 +757,6 @@ async def monitor_realtime_alerts(bot: Bot):
             
             await asyncio.sleep(60)
 
-        # Keep-Alive Self Ping for Render Free Tier
-        # This forces the Render router to see external traffic and prevents the web service from sleeping.
-        if int(time.time()) % 600 < 60: # Every ~10 minutes
-            try:
-                import requests
-                requests.get("https://newsagent-85h8.onrender.com/api/uptime", timeout=5)
-            except:
-                pass
-  # Check every minute
-            
         except Exception as e:
             print(f"[REALTIME] Monitor error: {e}"); await send_admin_alert(bot, f"[REALTIME] {e}")
             await asyncio.sleep(60)
