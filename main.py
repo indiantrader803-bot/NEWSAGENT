@@ -2599,7 +2599,32 @@ def fetch_latest_articles(query: str = FOREX_QUERY) -> list[dict[str, Any]]:
                 cached_api_articles = []
 
     live_articles = fetch_live_market_news()
-    combined = cached_api_articles + live_articles
+    
+    # Filter live_articles based on query context to prevent category crossover
+    q_lower = query.lower()
+    is_india = "india" in q_lower or "nse" in q_lower or "bse" in q_lower or "nifty" in q_lower
+    is_crypto = "crypto" in q_lower or "bitcoin" in q_lower
+    
+    filtered_live = []
+    for a in live_articles:
+        text = (str(a.get("title", "")) + " " + str(a.get("description", ""))).lower()
+        link = str(a.get("link", "")).lower()
+        
+        is_indian_source = "economictimes" in link or "livemint" in link or "moneycontrol" in link
+        has_indian_kw = any(k in text for k in ["india", "nse", "bse", "nifty", "sensex", "rupee", "rbi"])
+        has_crypto_kw = any(k in text for k in ["crypto", "bitcoin", "btc", "eth", "ethereum", "solana", "memecoin"])
+        
+        if is_india:
+            if is_indian_source or has_indian_kw:
+                filtered_live.append(a)
+        elif is_crypto:
+            if has_crypto_kw:
+                filtered_live.append(a)
+        else: # forex/global
+            if not is_indian_source and not has_indian_kw:
+                filtered_live.append(a)
+                
+    combined = cached_api_articles + filtered_live
     seen = set()
     unique = []
     for article in combined:
