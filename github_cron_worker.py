@@ -18,7 +18,8 @@ async def run_single_cycle():
     finally:
         main.save_seen_keys(seen_keys)
         
-    ist_now = unified_24x7_worker.get_ist_now()
+    from datetime import datetime, timezone, timedelta
+    ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     if ist_now.weekday() < 5 and 9 <= ist_now.hour <= 15:
         try:
             import indian_scoring as iscoring
