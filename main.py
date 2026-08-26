@@ -2617,14 +2617,20 @@ def is_recent(article: dict[str, Any], max_age_hours: int = 48) -> bool:
     if not pub_date:
         return False
     try:
-        dt_str = pub_date.replace("Z", "+00:00")
-        if "+" not in dt_str and dt_str.count("-") == 2:
-            dt_str += "+00:00"
-        pub = datetime.fromisoformat(dt_str)
+        import email.utils
+        parsed_tuple = email.utils.parsedate_tz(pub_date)
+        if parsed_tuple:
+            timestamp = email.utils.mktime_tz(parsed_tuple)
+            pub = datetime.fromtimestamp(timestamp, timezone.utc)
+        else:
+            dt_str = pub_date.replace("Z", "+00:00")
+            if "+" not in dt_str and dt_str.count("-") == 2:
+                dt_str += "+00:00"
+            pub = datetime.fromisoformat(dt_str)
         delta = datetime.now(timezone.utc) - pub
         return delta.total_seconds() < max_age_hours * 3600
     except Exception:
-        return True
+        return False
 
 
 def format_market_snapshot_block() -> str | None:
