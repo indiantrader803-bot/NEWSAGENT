@@ -1,8 +1,8 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import asyncio
 import time
 import main
-import unified_24x7_worker
+import single_pass_worker
 from telegram import Bot
 
 async def run_single_cycle():
@@ -18,39 +18,23 @@ async def run_single_cycle():
     finally:
         main.save_seen_keys(seen_keys)
         
-    from datetime import datetime, timezone, timedelta
-    ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
-    if ist_now.weekday() < 5 and 9 <= ist_now.hour <= 15:
-        try:
-            import indian_scoring as iscoring
-            intel = iscoring.get_full_intel(exchange="NSE")
-            graded_signals = intel.get("top_graded_signals", [])
-            print(f"[CRON] Found {len(graded_signals)} Indian Graded Signals")
+    print("[CRON] Running market monitors...")
+    try:
+        await asyncio.gather(
+            single_pass_worker.monitor_indian_market(bot),
+            single_pass_worker.monitor_us_market(bot),
+            single_pass_worker.monitor_forex_signals(bot),
+            single_pass_worker.monitor_crypto_market(bot),
+            single_pass_worker.monitor_commodities(bot),
+            single_pass_worker.monitor_realtime_alerts(bot)
+        )
+    except Exception as e:
+        print(f"[CRON] Error in market monitors: {e}")
             
-            for sig in graded_signals:
-                strike = sig.get('strike')
-                direction = sig.get('direction')
-                score = sig.get('score')
-                headline = sig.get('headline')
-                
-                unique_key = f"live_graded_{ist_now.date()}_{strike}_{direction}"
-                if unified_24x7_worker.state.can_send_message(unique_key, 86400):
-                    msg = (
-                        f"\U0001f3af <b>TOP SIGNALS - GRADED LIVE</b> \U0001f3af\n"
-                        f"-------------------------\n"
-                        f"\U0001f4c8 <b>{strike}</b> [{direction}]\n"
-                        f"\U0001f4ca Score: {score}/100\n"
-                        f"\U0001f4a1 {headline}\n"
-                        f"-------------------------\n"
-                        f"\u26a0\ufe0f <i>Fast Execution Required</i>"
-                    )
-                    from send_signal_now import broadcast_message
-                    await broadcast_message(bot, msg, parse_mode="HTML")
-                    unified_24x7_worker.state.record_message(unique_key)
-        except Exception as e:
-            print(f"[CRON] Error in Indian Graded Signals: {e}")
-            
-    unified_24x7_worker.state.save()
+    single_pass_worker.state.save()
+    
+    # We must also sync the state back to unified_24x7_worker state file so it persists correctly 
+    # (they use the same worker_24x7_state.json anyway because it's defined in the class).
     print("[CRON] Cycle complete.")
 
 if __name__ == "__main__":
