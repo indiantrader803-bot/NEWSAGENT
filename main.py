@@ -11,6 +11,7 @@ async def _send_main_alert(bot, msg):
             await send_telegram_message(bot, f"?? *API/CYCLE ERROR*\n`{msg[:200]}`", parse_mode="Markdown")
         except: pass
 import json
+import groww_api
 import time
 
 START_TIME = time.time()
@@ -1632,6 +1633,26 @@ def fetch_current_prices() -> dict[str, float]:
     try:
         for pair, ticker in yf_map.items():
             if pair not in rates:
+                # Groww Live API Override for Indian stocks
+                trading_symbol = None
+                exchange = "NSE"
+                if ticker.endswith(".NS"):
+                    trading_symbol = ticker.replace(".NS", "")
+                elif ticker == "^NSEI":
+                    trading_symbol = "NIFTY"
+                elif ticker == "^BSESN":
+                    trading_symbol = "SENSEX"
+                    exchange = "BSE"
+                elif ticker == "^NSEBANK":
+                    trading_symbol = "BANKNIFTY"
+                    
+                if trading_symbol:
+                    groww_price = groww_api.get_groww_price(trading_symbol, exchange=exchange)
+                    if groww_price is not None:
+                        rates[pair] = round(float(groww_price), 2)
+                        continue
+
+                # Yahoo Finance Fallback
                 tk = yf.Ticker(ticker)
                 hist = tk.history(period="1d")
                 if not hist.empty:
