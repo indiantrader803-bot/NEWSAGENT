@@ -3,6 +3,7 @@ import asyncio
 import time
 import main
 import single_pass_worker
+import paper_trader
 from telegram import Bot
 
 async def run_single_cycle():
@@ -26,7 +27,8 @@ async def run_single_cycle():
             single_pass_worker.monitor_forex_signals(bot),
             single_pass_worker.monitor_crypto_market(bot),
             single_pass_worker.monitor_commodities(bot),
-            single_pass_worker.monitor_realtime_alerts(bot)
+            single_pass_worker.monitor_realtime_alerts(bot),
+            paper_trader.evaluate_open_trades(bot)
         )
     except Exception as e:
         print(f"[CRON] Error in market monitors: {e}")

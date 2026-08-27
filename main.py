@@ -12,6 +12,7 @@ async def _send_main_alert(bot, msg):
         except: pass
 import json
 import groww_api
+import paper_trader
 import time
 
 START_TIME = time.time()
