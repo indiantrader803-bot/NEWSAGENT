@@ -248,6 +248,8 @@ def get_current_market_session() -> dict[str, bool]:
 # ═══════════════════════════════════════════════════════════════════════════
 
 async def monitor_indian_market(bot: Bot):
+    from datetime import datetime, timezone, timedelta
+    ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     """Monitor Indian equity market during trading hours."""
     category = "indian_market"
     
@@ -743,6 +745,8 @@ async def monitor_commodities(bot: Bot):
 
 
 async def monitor_realtime_alerts(bot: Bot):
+    from datetime import datetime, timezone, timedelta
+    ist_now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
     """Monitor real-time market alerts (VIX spikes, crashes, etc.)."""
     category = "realtime_alerts"
     
@@ -902,10 +906,10 @@ async def run_24x7_worker():
         raise
 
 
-def main():
+def run_worker():
     """Entry point for 24/7 worker."""
     asyncio.run(run_24x7_worker())
 
 
 if __name__ == "__main__":
-    main()
+    run_worker()
