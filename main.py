@@ -1125,6 +1125,11 @@ def log_signal(pair: str, direction: str, entry: float, tp1: float, tp2: float, 
         "source": source,
     }
     _signal_log.append(record)
+    try:
+        import paper_trader
+        paper_trader.open_virtual_trade(record)
+    except Exception as e:
+        print(f"Error opening paper trade: {e}")
     save_signal_log(_signal_log)
     # Attempt automated trading if enabled (safe default: disabled or dummy/paper broker)
     try:
