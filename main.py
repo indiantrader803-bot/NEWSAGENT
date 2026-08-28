@@ -3175,6 +3175,8 @@ def format_india_message(article: dict[str, Any]) -> str:
             is_buy = (direction == "Bullish") == (multiplier > 0)
             if asset in _STOCK_ASSETS:
                 e, t1, t2, s = _calc_percentage_levels(price, is_buy)
+                opt_type = "CALL (CE)" if is_buy else "PUT (PE)"
+                inst_name = f"{asset} {opt_type} Option"
             else:
                 e = round(price, 2)
                 t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 2)
@@ -3307,6 +3309,8 @@ def format_intraday_message(article: dict[str, Any]) -> str:
             is_buy = (direction == "Bullish") == (multiplier > 0)
             if asset in _STOCK_ASSETS:
                 e, t1, t2, s = _calc_percentage_levels(price, is_buy)
+                opt_type = "CALL (CE)" if is_buy else "PUT (PE)"
+                inst_name = f"{asset} {opt_type} Option"
             else:
                 e = round(price, 2)
                 t1 = round(price + 75 * pip_size if is_buy else price - 75 * pip_size, 2)
