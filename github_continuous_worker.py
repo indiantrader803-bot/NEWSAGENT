@@ -28,7 +28,7 @@ def git_sync_state():
         # Pull rebase and push
         subprocess.run(["git", "pull", "--rebase", "origin", "main"], check=False)
         push_res = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True)
-        print("[GIT] Push successful.")
+        print(f"[GIT] Push result: {push_res.stdout} {push_res.stderr}")
     except Exception as e:
         print(f"[GIT] Error during sync: {e}")
 
