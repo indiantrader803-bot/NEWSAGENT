@@ -1,0 +1,46 @@
+name: AI Workflow Healer Agent
+
+on:
+  schedule:
+    - cron: "0 */2 * * *" # Runs every 2 hours to check on the main bot
+  workflow_dispatch:
+
+jobs:
+  monitor-and-fix:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Monitor Main Bot Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "[AGENT] Checking health of the 24/7 Market Bot..."
+          
+          # Fetch latest runs
+          LATEST_RUN=$(gh run list --workflow market-bot-cron.yml --limit 1 --json status,conclusion,databaseId --jq '.[0]')
+          
+          STATUS=$(echo $LATEST_RUN | jq -r '.status')
+          CONCLUSION=$(echo $LATEST_RUN | jq -r '.conclusion')
+          RUN_ID=$(echo $LATEST_RUN | jq -r '.databaseId')
+          
+          echo "Latest Run ID: $RUN_ID"
+          echo "Status: $STATUS"
+          echo "Conclusion: $CONCLUSION"
+          
+          if [[ "$STATUS" == "completed" && "$CONCLUSION" != "success" ]]; then
+            echo "[AGENT] Detected failure in main bot! Analyzing..."
+            
+            # Restart the failed workflow
+            echo "[AGENT] Restarting workflow run $RUN_ID to fix the issue..."
+            gh run rerun $RUN_ID --failed
+            
+          elif [[ "$STATUS" == "completed" && "$CONCLUSION" == "success" ]]; then
+             echo "[AGENT] Workflow is healthy but currently stopped. Triggering a new cycle..."
+             gh workflow run market-bot-cron.yml
+          else
+            echo "[AGENT] Workflow is currently running beautifully. No fixes needed!"
+          fi

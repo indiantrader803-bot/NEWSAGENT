@@ -77,7 +77,7 @@ async def continuous_loop():
         git_sync_state()
         
         elapsed = time.time() - cycle_start
-        sleep_time = max(0, 900 - elapsed) # 15 minutes (900 seconds)
+        sleep_time = max(0, 1500 - elapsed) # 25 minutes (1500 seconds)
         print(f"[WORKER] Cycle complete in {elapsed:.1f}s. Sleeping for {sleep_time:.1f}s...")
         await asyncio.sleep(sleep_time)
 
