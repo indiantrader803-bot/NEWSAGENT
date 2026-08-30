@@ -1845,6 +1845,47 @@ def _call_onemin_api(prompt: str, system: str | None = None, model: str = "gpt-4
     return None
 
 
+def _call_nvidia_api(prompt: str, system: str | None = None, json_mode: bool = False) -> str | None:
+    api_key = os.getenv("NVIDIA_API_KEY", "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")
+    if not api_key: return None
+    import requests
+    
+    messages = []
+    if system:
+        messages.append({"role": "system", "content": system})
+    messages.append({"role": "user", "content": prompt})
+    
+    payload = {
+        "model": "deepseek-ai/deepseek-v4-pro-0813",
+        "messages": messages,
+        "temperature": 1,
+        "top_p": 0.95,
+        "max_tokens": 16384,
+        "chat_template_kwargs": {"thinking": False}
+    }
+    if json_mode:
+        payload["response_format"] = {"type": "json_object"}
+        
+    try:
+        resp = requests.post(
+            "https://integrate.api.nvidia.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            if "choices" in data and len(data["choices"]) > 0:
+                return data["choices"][0]["message"]["content"].strip()
+        else:
+            print(f"[NVIDIA] API Error: {resp.status_code} {resp.text}")
+    except Exception as e:
+        print(f"[NVIDIA] Error: {e}")
+    return None
+
 def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode: bool = False) -> str | None:
     import requests
     messages: list[dict] = []
@@ -1852,7 +1893,12 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
-    # 1. Try Bynara API (deepseek-v4-pro-free)
+    # 1. Try NVIDIA API (DeepSeek v4 Pro)
+    nv_res = _call_nvidia_api(prompt, system_prompt, json_mode)
+    if nv_res:
+        return nv_res
+
+    # 2. Try Bynara API (deepseek-v4-pro-free)
     bynara_key = os.getenv("BYNARA_API_KEY", "sk-nry-wWqj7bgCiHuO9eKsKXC5PcytwpCAt4kmAUbM6ol70uA")
     if bynara_key:
         payload = {
@@ -1879,6 +1925,11 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
             print(f"[BYNARA] Error: {e}")
 
     # 2. Try OneMin API
+    # 1. Try NVIDIA API (DeepSeek v4 Pro)
+    nv_res = _call_nvidia_api(prompt, system_prompt)
+    if nv_res:
+        return escape(nv_res)
+
     onemin_key = os.getenv("ONEMIN_API_KEY", "").strip()
     if onemin_key:
         for m in ["gpt-4o", "deepseek-chat", "gpt-4o-mini"]:
@@ -1917,6 +1968,11 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
 
 
 def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
+    # 1. Try NVIDIA API (DeepSeek v4 Pro)
+    nv_res = _call_nvidia_api(prompt, system_prompt)
+    if nv_res:
+        return escape(nv_res)
+
     onemin_key = os.getenv("ONEMIN_API_KEY", "").strip()
     if onemin_key:
         for m in ["gpt-4o", "deepseek-chat", "gpt-4o-mini"]:

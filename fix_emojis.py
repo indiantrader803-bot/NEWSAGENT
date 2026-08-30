@@ -1,11 +1,12 @@
 with open("dashboard.html", "r", encoding="utf-8") as f:
-    html = f.read()
+    content = f.read()
 
-html = html.replace("?? BTC Lottery Miner", "?? BTC Lottery Miner")
-html = html.replace("?? Bitcoin Lottery Miner", "?? Bitcoin Lottery Miner")
-html = html.replace("?? Start Solo Mining", "?? Start Solo Mining")
-html = html.replace("? Time's up!", "? Time's up!")
+content = content.replace("?? AI Option Momentum Engine", "?? AI Option Momentum Engine")
+content = content.replace("?? Option Momentum AI", "?? Option Momentum AI")
+content = content.replace("? Active Option Trades", "? Active Option Trades")
+content = content.replace("?? Event Log", "?? Event Log")
 
 with open("dashboard.html", "w", encoding="utf-8") as f:
-    f.write(html)
-print("Emojis fixed!")
+    f.write(content)
+
+print("Emojis fixed")
