@@ -1845,6 +1845,33 @@ def _call_onemin_api(prompt: str, system: str | None = None, model: str = "gpt-4
     return None
 
 
+
+def _call_explabs_api(prompt: str, is_json: bool = False) -> str | None:
+    api_key = os.getenv("EXPLABS_API_KEY")
+    if not api_key:
+        return None
+    url = "https://api.experientiallabs.ai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "gpt-6-astra",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.5
+    }
+    if is_json:
+        payload["response_format"] = {"type": "json_object"}
+        
+    try:
+        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"[EXPLABS] Error: {e}")
+        return None
+
 def _call_nvidia_api(prompt: str, system: str | None = None, json_mode: bool = False) -> str | None:
     api_key = os.getenv("NVIDIA_API_KEY", "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")
     if not api_key: return None
