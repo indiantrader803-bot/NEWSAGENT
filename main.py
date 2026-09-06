@@ -2716,7 +2716,11 @@ def fetch_latest_articles(query: str = FOREX_QUERY) -> list[dict[str, Any]]:
             if cache_key in _news_cache:
                 cached_api_articles = _news_cache[cache_key][1]
             else:
-                fallback_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-US&gl=US&ceid=US:en"
+                from urllib.parse import quote
+                if "india" in query.lower() or "nifty" in query.lower() or "sensex" in query.lower():
+                    fallback_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-IN&gl=IN&ceid=IN:en"
+                else:
+                    fallback_url = f"https://news.google.com/rss/search?q={quote(query)}&hl=en-US&gl=US&ceid=US:en"
                 cached_api_articles = fetch_live_news_from_url(fallback_url)
 
     live_articles = fetch_live_market_news()
