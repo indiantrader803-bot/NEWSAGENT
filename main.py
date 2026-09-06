@@ -2196,11 +2196,20 @@ def _openai_chat(prompt: str, system_prompt: str | None = None) -> str | None:
 
 
 def _best_ai(prompt: str, system_prompt: str | None = None) -> str | None:
-    """Try OpenAI first, fall back to Groq."""
-    result = _openai_chat(prompt, system_prompt)
-    if result:
-        return result
-    return _groq_chat(prompt, system_prompt)
+    if os.getenv("EXPLABS_API_KEY"):
+        res = _call_explabs_api(prompt, False)
+        if res: return res
+    
+    try:
+        result = _openai_chat(prompt, system_prompt)
+        if result: return result
+    except:
+        pass
+        
+    try:
+        return _groq_chat(prompt, system_prompt)
+    except:
+        return None
 
 
 def ai_enhanced_market_analysis(asset: str, news_text: str) -> str | None:
