@@ -2679,7 +2679,8 @@ def fetch_latest_articles(query: str = FOREX_QUERY) -> list[dict[str, Any]]:
             if cache_key in _news_cache:
                 cached_api_articles = _news_cache[cache_key][1]
             else:
-                cached_api_articles = []
+                fallback_url = f"https://news.google.com/rss/search?q={urllib.parse.quote(query)}&hl=en-US&gl=US&ceid=US:en"
+                cached_api_articles = fetch_live_news_from_url(fallback_url)
 
     live_articles = fetch_live_market_news()
     
@@ -3094,7 +3095,7 @@ def format_forex_message(article: dict[str, Any]) -> str:
             text_body = bengali_desc + "\n\n(Original: " + desc + ")"
             article["description"] = text_body  # Update for the rest of the flow
 
-    title     = _strip_md(article.get("title") or "Market Update")
+    title     = _translate_to_bengali(_strip_md(article.get("title") or "Market Update"))
     source    = _strip_md(article.get("source_name") or "")
     published = _strip_md(article.get("pubDate") or "")
     link      = article.get("link") or ""
@@ -3129,6 +3130,8 @@ def format_forex_message(article: dict[str, Any]) -> str:
                 risk   = abs(s - e)
                 rr_str = f"{reward / risk:.1f}" if risk > 0 else "?"
                 conf_pct = _confidence_pct(confidence)
+                if conf_pct < 70:
+                    return None
                 ai_reason = _strip_md(ai_analyze_news(article) or title[:200])
                 inst_name = INSTRUMENT_NAMES.get(pair, pair)
                 log_signal(pair, direction_label, e, t1, t2, s, "forex")
@@ -3155,6 +3158,8 @@ def format_forex_message(article: dict[str, Any]) -> str:
 
     # ── Fallback: news alert (Template 2 style) ──────────────────────────────
     ai_analysis = _strip_md(ai_analyze_news(article) or ensure_summary(article)[:300])
+    ai_analysis = _translate_to_bengali(ai_analysis)
+    ai_analysis = _translate_to_bengali(ai_analysis)
     dir_icon_fb = (
         "🟢 Bullish" if direction == "Bullish"
         else "🔴 Bearish" if direction == "Bearish"
@@ -3197,7 +3202,7 @@ def format_india_message(article: dict[str, Any]) -> str:
         bengali_desc = _translate_to_bengali(desc)
         article["description"] = bengali_desc + "\n\n(Original: " + desc + ")"
 
-    title     = _strip_md(article.get("title") or "India Market Update")
+    title     = _translate_to_bengali(_strip_md(article.get("title") or "India Market Update"))
     source    = _strip_md(article.get("source_name") or "")
     published = _strip_md(article.get("pubDate") or "")
 
@@ -3215,7 +3220,10 @@ def format_india_message(article: dict[str, Any]) -> str:
         else "➖ WATCH"
     )
     conf_pct   = _confidence_pct(confidence)
+    if conf_pct < 70:
+        return None
     ai_insight = _strip_md(ai_analyze_news(article) or ensure_summary(article)[:300])
+    ai_insight = _translate_to_bengali(ai_insight)
     inst_name  = INSTRUMENT_NAMES.get(asset, asset)
 
     # Try to compute price levels
@@ -3327,7 +3335,10 @@ def format_intraday_message(article: dict[str, Any]) -> str:
         else "➖ WATCH"
     )
     conf_pct   = _confidence_pct(confidence)
+    if conf_pct < 70:
+        return None
     ai_insight = _strip_md(ai_analyze_news(article) or ensure_summary(article)[:300])
+    ai_insight = _translate_to_bengali(ai_insight)
 
     exchange_tag = "NSE" if asset in {
         "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "SBIN", "BHARTI",
