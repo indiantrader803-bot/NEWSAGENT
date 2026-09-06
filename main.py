@@ -1858,7 +1858,7 @@ def _call_explabs_api(prompt: str, is_json: bool = False) -> str | None:
     payload = {
         "model": "gpt-6-astra",
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.5
+        
     }
     if is_json:
         payload["response_format"] = {"type": "json_object"}
