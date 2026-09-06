@@ -15,3 +15,5 @@ pyautogen
 finrobot
 
 deep-translator==1.11.4
+scikit-learn
+joblib

@@ -1,34 +1,37 @@
-name: Daily Self-Improvement Agent
+name: Self-Improving ML Agent
 
 on:
   schedule:
-    - cron: "0 0 * * *" # Runs daily at midnight UTC
-  workflow_dispatch:
+    - cron: '0 0 * * *'  # Runs daily at midnight
+  workflow_dispatch:      # Allow manual trigger
 
 jobs:
-  self-improve:
+  train-model:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Required to commit and push code changes
+      contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
           cache: 'pip'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Self-Improvement Cycle
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          BOT_TOKEN2: ${{ secrets.BOT_TOKEN2 }}
-          BOT_TOKEN3: ${{ secrets.BOT_TOKEN3 }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TELEGRAM_CHAT_ID3: ${{ secrets.TELEGRAM_CHAT_ID3 }}
-          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          ONEMIN_API_KEY: ${{ secrets.ONEMIN_API_KEY }}
-        run: python self_improvement_agent.py
+      - name: Run Self-Improving ML Agent
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          
+          python self_improving_agent.py
+          
+          git add ml_trade_model.pkl ml_regime.json || true
+          git commit -m "chore(ml): agent self-improvement cycle completed [skip ci]" || echo "No ML changes"
+          git push origin main || echo "Push failed or not needed"
