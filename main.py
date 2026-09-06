@@ -22,7 +22,7 @@ from contextlib import contextmanager
 from datetime import datetime, time, timedelta, timezone
 from html import escape
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, quote
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 
