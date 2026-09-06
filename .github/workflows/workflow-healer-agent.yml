@@ -34,8 +34,12 @@ jobs:
           if [[ "$STATUS" == "completed" && "$CONCLUSION" != "success" ]]; then
             echo "[AGENT] Detected failure in main bot! Analyzing..."
             
+            echo "[AGENT] Calling the Self-Improvement ML Agent to analyze, re-train, and update parameters..."
+            gh workflow run self-improvement.yml || true
+            sleep 15
+            
             # Restart the failed workflow
-            echo "[AGENT] Restarting workflow run $RUN_ID to fix the issue..."
+            echo "[AGENT] Restarting workflow run $RUN_ID with upgraded ML model parameters..."
             gh run rerun $RUN_ID --failed
             
           elif [[ "$STATUS" == "completed" && "$CONCLUSION" == "success" ]]; then
