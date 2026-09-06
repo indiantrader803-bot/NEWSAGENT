@@ -354,10 +354,7 @@ class AIQuestionTests(unittest.TestCase):
         self.assertEqual(captured["system_prompt"], main.INSTITUTIONAL_ANALYSIS_SYSTEM_PROMPT)
 
     def test_ai_answer_question_returns_none_without_key(self):
-        with patch.object(main, "GROQ_API_KEY", ""), \
-             patch.object(main, "NVIDIA_API_KEY", ""), \
-             patch.object(main, "BYNARA_API_KEY", ""), \
-             patch.object(main, "fetch_current_prices", return_value={}):
+        with patch.object(main, "_best_ai", return_value=None):
             result = main.ai_answer_question("Is EUR/USD bullish?")
         self.assertIsNone(result)
 
