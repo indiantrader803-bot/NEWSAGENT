@@ -2795,6 +2795,78 @@ def _strip_md(text: str) -> str:
     return _re.sub(r'[*_`>#()\[\]\\<>]', '', text)
 
 
+
+def _apply_ml_improvement(asset, direction_str, original_conf_pct):
+    import os, json
+    if not os.path.exists("ml_regime.json") or not os.path.exists("ml_trade_model.pkl"):
+        return original_conf_pct
+    
+    try:
+        import joblib
+        import pandas as pd
+        import yfinance as yf
+        
+        # Load the ML regime
+        with open("ml_regime.json", "r") as f:
+            regime = json.load(f)
+            
+        historical_win_rate = regime.get("historical_win_rate", 0.5)
+        if historical_win_rate < 0.4:
+            return original_conf_pct - 20  # Strategy is currently failing, reduce confidence heavily
+            
+        # Load Model
+        rf = joblib.load("ml_trade_model.pkl")
+        
+        # Fetch current RSI and Volatility
+        yf_ticker = asset
+        if "/" in asset:
+            yf_ticker = asset.replace("/", "") + "=X"
+            if "BTC" in asset or "ETH" in asset or "SOL" in asset:
+                yf_ticker = asset.replace("/", "-")
+        elif asset == "NIFTY":
+            yf_ticker = "^NSEI"
+        else:
+            yf_ticker = asset + ".NS"
+            
+        hist = yf.download(yf_ticker, period="1mo", interval="1d", progress=False)
+        if hist.empty or len(hist) < 20:
+            return original_conf_pct
+            
+        delta = hist['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        rsi = float((100 - (100 / (1 + rs))).iloc[-1])
+        volatility = float(hist['Close'].pct_change().rolling(window=14).std().iloc[-1])
+        sma20 = float(hist['Close'].rolling(window=20).mean().iloc[-1])
+        close_price = float(hist['Close'].iloc[-1])
+        price_above_sma = 1 if close_price > sma20 else 0
+        direction_val = 1 if direction_str == "Bullish" else 0
+        
+        # Predict Probability of Win
+        X_current = pd.DataFrame([{
+            'direction': direction_val, 
+            'rsi': rsi, 
+            'volatility': volatility,
+            'price_above_sma': price_above_sma
+        }])
+        
+        win_prob = rf.predict_proba(X_current)[0][1] # Probability of Class 1 (Win)
+        
+        print(f"[ML AGENT] Evaluating {asset} {direction_str} -> Model Win Probability: {win_prob*100:.1f}%")
+        
+        # Modify confidence dynamically
+        if win_prob > 0.6:
+            return min(95, original_conf_pct + 15)  # Boost high probability setups
+        elif win_prob < 0.4:
+            return original_conf_pct - 20  # Penalize low probability setups (may drop below 70%)
+            
+        return original_conf_pct
+    except Exception as e:
+        print(f"[ML AGENT ERROR] {e}")
+        return original_conf_pct
+
+
 def _confidence_pct(level: str) -> int:
     return {"High": 85, "Medium": 72, "Low": 55}.get(level, 50)
 
@@ -3130,6 +3202,7 @@ def format_forex_message(article: dict[str, Any]) -> str:
                 risk   = abs(s - e)
                 rr_str = f"{reward / risk:.1f}" if risk > 0 else "?"
                 conf_pct = _confidence_pct(confidence)
+                conf_pct = _apply_ml_improvement(pair, direction_str, conf_pct)
                 if conf_pct < 70:
                     return None
                 ai_reason = _strip_md(ai_analyze_news(article) or title[:200])
@@ -3220,6 +3293,7 @@ def format_india_message(article: dict[str, Any]) -> str:
         else "➖ WATCH"
     )
     conf_pct   = _confidence_pct(confidence)
+    conf_pct = _apply_ml_improvement(asset, direction, conf_pct)
     if conf_pct < 70:
         return None
     ai_insight = _strip_md(ai_analyze_news(article) or ensure_summary(article)[:300])
@@ -3335,6 +3409,7 @@ def format_intraday_message(article: dict[str, Any]) -> str:
         else "➖ WATCH"
     )
     conf_pct   = _confidence_pct(confidence)
+    conf_pct = _apply_ml_improvement(asset, direction, conf_pct)
     if conf_pct < 70:
         return None
     ai_insight = _strip_md(ai_analyze_news(article) or ensure_summary(article)[:300])
