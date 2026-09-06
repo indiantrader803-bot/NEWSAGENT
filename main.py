@@ -1864,6 +1864,7 @@ def _call_explabs_api(prompt: str, is_json: bool = False) -> str | None:
         payload["response_format"] = {"type": "json_object"}
         
     try:
+        import urllib.request
         req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=30) as response:
             data = json.loads(response.read().decode("utf-8"))
