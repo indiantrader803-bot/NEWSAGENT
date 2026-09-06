@@ -286,7 +286,8 @@ class BilingualAndStockTests(unittest.TestCase):
 
         with patch.object(main, "translate_to_bengali", return_value=None), \
              patch.object(main, "format_stock_price_info", return_value=None), \
-             patch.object(main, "fetch_current_prices", return_value={"TCS": 4000.0}):
+             patch.object(main, "fetch_current_prices", return_value={"TCS": 4000.0}), \
+             patch.object(main, "compute_confidence", return_value=("Bullish", "High")):
             message = main.format_intraday_message(article)
 
         self.assertIn("TCS", message)
@@ -354,6 +355,8 @@ class AIQuestionTests(unittest.TestCase):
 
     def test_ai_answer_question_returns_none_without_key(self):
         with patch.object(main, "GROQ_API_KEY", ""), \
+             patch.object(main, "NVIDIA_API_KEY", ""), \
+             patch.object(main, "BYNARA_API_KEY", ""), \
              patch.object(main, "fetch_current_prices", return_value={}):
             result = main.ai_answer_question("Is EUR/USD bullish?")
         self.assertIsNone(result)
