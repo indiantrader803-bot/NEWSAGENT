@@ -116,6 +116,16 @@ INTRADAY_STOCK_QUERY = os.getenv(
     'AND (india OR "bse" OR "nse" OR "bombay stock exchange")',
 )
 
+
+COMMODITY_QUERY = os.getenv(
+    "COMMODITY_QUERY",
+    '(gold OR silver OR oil OR crude OR brent OR copper OR "natural gas" OR platinum OR commodity) AND (market OR trading OR price OR forecast)'
+)
+US_MARKET_QUERY = os.getenv(
+    "US_MARKET_QUERY",
+    '(nasdaq OR sp500 OR "s&p 500" OR dow OR "wall street" OR "us market" OR "nyse" OR fed OR powell OR apple OR tesla OR nvidia OR microsoft)'
+)
+
 FOREX_TERMS = {
     "forex",
     "currency",
@@ -3196,6 +3206,71 @@ def _translate_to_bengali(text: str) -> str:
         print(f"[TRANSLATE ERROR] {e}")
         return text
 
+
+def ai_generate_trade_message(article: dict, category: str) -> str | None:
+    title = article.get("title", "")
+    desc = article.get("description", "")
+    text_body = f"{title}\n{desc}"[:1000]
+    
+    prompt = (
+        "You are an elite institutional trader and analyst. Analyze the following news.\n"
+        "1. Determine if this news is STRONG and IMPORTANT enough to trigger a high-probability trade (minimum 80% confidence).\n"
+        "2. If it is NOT a highly actionable trade setup, you must set 'is_trade' to false.\n"
+        "3. If it IS a strong trade setup, extract the Asset Name, the Direction (BUY/SELL), "
+        "and calculate logical Entry Price, Take Profit (TP), and Stop Loss (SL) levels based on current market context or standard technical patterns for the asset.\n"
+        "4. Write a professional trading analysis EXCLUSIVELY IN BENGALI explaining the rationale.\n\n"
+        f"News:\n{text_body}\n\n"
+        "Return ONLY a valid JSON object with these exact keys:\n"
+        "- is_trade: boolean (true only if highly actionable)\n"
+        "- asset: string (name of the asset, e.g. Gold, EUR/USD, Reliance, Tesla)\n"
+        "- direction: string (BUY or SELL)\n"
+        "- entry: string (e.g. 'CMP' or 'Around 1950.50')\n"
+        "- tp: string (Target price)\n"
+        "- sl: string (Stop loss)\n"
+        "- analysis_bengali: string (Proper analysis in Bengali language)\n"
+    )
+    
+    try:
+        raw_res = _best_ai(prompt)
+        if not raw_res: return None
+        
+        import json
+        import re
+        
+        # Strip backticks if the AI returns markdown JSON
+        match = re.search(r'\{.*\}', raw_res, re.DOTALL)
+        if match:
+            raw_res = match.group(0)
+            
+        data = json.loads(raw_res)
+        
+        if not data.get("is_trade"):
+            return None
+            
+        asset = data.get("asset", "Unknown")
+        direction = data.get("direction", "BUY").upper()
+        entry = data.get("entry", "CMP")
+        tp = data.get("tp", "Open")
+        sl = data.get("sl", "Strict")
+        analysis = data.get("analysis_bengali", "")
+        
+        icon = "?? BUY" if "BUY" in direction else "?? SELL"
+        cat_header = category.replace("_", " ").upper()
+        
+        msg = (
+            f"? *STRONG {cat_header} TRADE ALERT* ?\n\n"
+            f"*{asset}* | {icon}\n\n"
+            f"?? *Entry:* {entry}\n"
+            f"? *Take Profit (TP):* {tp}\n"
+            f"?? *Stop Loss (SL):* {sl}\n\n"
+            f"?? *???????? (Analysis):*\n{analysis}\n\n"
+            f"?? _Source:_ {article.get('source_name', 'Market News')}"
+        )
+        return msg
+    except Exception as e:
+        print(f"[AI FORMATTER ERROR] {e}")
+        return None
+
 def format_forex_message(article: dict[str, Any]) -> str:
     """Template 1 — Forex/Crypto trade signal or news alert."""
 
@@ -4115,44 +4190,55 @@ async def send_institutional_signals(bot: Bot, seen_keys: set[str]) -> int:
 
 async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = False) -> int:
     total_sent = 0
-
-    try:
-        forex_articles = fetch_latest_articles(FOREX_QUERY)
-        total_sent += await send_category_article(
-            bot, forex_articles, seen_keys,
-            "forex", format_forex_message, silent_init
-        )
-    except Exception as exc:
-        print(f"[ERROR] Forex category failed in cycle: {exc}"); await _send_main_alert(bot, f"Forex category failed: {exc}")
-
-    try:
-        india_articles = fetch_latest_articles(INDIA_MARKET_QUERY)
-        total_sent += await send_category_article(
-            bot, india_articles, seen_keys,
-            "india", format_india_message, silent_init
-        )
-    except Exception as exc:
-        print(f"[ERROR] India category failed in cycle: {exc}"); await _send_main_alert(bot, f"India category failed: {exc}")
-
-    try:
-        intraday_articles = fetch_latest_articles(INTRADAY_STOCK_QUERY)
-        total_sent += await send_category_article(
-            bot, intraday_articles, seen_keys,
-            "intraday", format_intraday_message, silent_init
-        )
-    except Exception as exc:
-        print(f"[ERROR] Intraday category failed in cycle: {exc}"); await _send_main_alert(bot, f"Intraday category failed: {exc}")
-
+    
+    categories = [
+        ("forex", FOREX_QUERY),
+        ("india", INDIA_MARKET_QUERY),
+        ("intraday", INTRADAY_STOCK_QUERY),
+        ("commodity", COMMODITY_QUERY),
+        ("us_market", US_MARKET_QUERY)
+    ]
+    
+    for cat_name, query in categories:
+        try:
+            articles = fetch_latest_articles(query)
+            for article in articles:
+                key = article_key(article)
+                if not key: continue
+                
+                full_key = f"{cat_name}:{key}"
+                title = clean_title_for_dedup(article.get("title", ""))
+                title_key = f"title:{title}" if title else None
+                
+                if full_key in seen_keys or key in seen_keys or (title_key and title_key in seen_keys):
+                    continue
+                if not is_recent(article):
+                    continue
+                    
+                if silent_init:
+                    seen_keys.add(full_key)
+                    if title_key: seen_keys.add(title_key)
+                    continue
+                    
+                # Call the advanced AI unified formatter directly
+                text = ai_generate_trade_message(article, cat_name)
+                if text:
+                    await broadcast(bot, text)
+                    total_sent += 1
+                
+                # Always mark as seen so we don't re-process weak news endlessly
+                seen_keys.add(full_key)
+                seen_keys.add(key)
+                if title_key: seen_keys.add(title_key)
+                
+        except Exception as exc:
+            print(f"[ERROR] {cat_name} category failed in cycle: {exc}")
+            
     try:
         total_sent += await send_options_suggestion(bot, seen_keys)
     except Exception as exc:
-        print(f"[ERROR] Options suggestions failed in cycle: {exc}"); await _send_main_alert(bot, f"Options suggestions failed: {exc}")
-
-    try:
-        total_sent += await send_institutional_signals(bot, seen_keys)
-    except Exception as exc:
-        print(f"[ERROR] Institutional signals failed in cycle: {exc}"); await _send_main_alert(bot, f"Institutional signals failed: {exc}")
-
+        print(f"[ERROR] Options suggestions failed in cycle: {exc}")
+        
     return total_sent
 
 
