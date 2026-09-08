@@ -1857,31 +1857,29 @@ def _call_onemin_api(prompt: str, system: str | None = None, model: str = "gpt-4
 
 
 def _call_explabs_api(prompt: str, is_json: bool = False) -> str | None:
-    api_key = os.getenv("EXPLABS_API_KEY")
-    if not api_key:
-        return None
-    url = "https://api.experientiallabs.ai/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": "gpt-6-astra",
-        "messages": [{"role": "user", "content": prompt}],
-        
-    }
-    if is_json:
-        payload["response_format"] = {"type": "json_object"}
-        
-    try:
-        import urllib.request
-        req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            return data["choices"][0]["message"]["content"]
-    except Exception as e:
-        print(f"[EXPLABS] Error: {e}")
-        return None
+    import time
+    for attempt in range(3):
+        try:
+            api_key = os.getenv("EXPLABS_API_KEY")
+            if not api_key: return None
+            url = "https://api.experientiallabs.ai/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+            payload = {"model": "gpt-6-astra", "messages": [{"role": "user", "content": prompt}]}
+            if is_json: payload["response_format"] = {"type": "json_object"}
+            
+            import urllib.request
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=30) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                return result["choices"][0]["message"]["content"]
+        except Exception as e:
+            if "429" in str(e):
+                print(f"[EXPLABS] 429 Rate Limit Hit. Sleeping {attempt * 3 + 2}s...")
+                time.sleep(attempt * 3 + 2)
+                continue
+            print(f"[EXPLABS] Error: {e}")
+            return None
+    return None
 
 def _call_nvidia_api(prompt: str, system: str | None = None, json_mode: bool = False) -> str | None:
     api_key = os.getenv("NVIDIA_API_KEY", "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")
@@ -4221,6 +4219,8 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = Fa
                     continue
                     
                 # Call the advanced AI unified formatter directly
+                import time
+                time.sleep(2.5)  # Avoid AI rate limits
                 text = ai_generate_trade_message(article, cat_name)
                 if text:
                     await broadcast(bot, text)
