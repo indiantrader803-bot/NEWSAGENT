@@ -2549,8 +2549,29 @@
         async function loadIndianIntel() {
             if (intelLoaded) return;
             try {
+
                 const res = await fetch(`${API_BASE}/api/indian-intel`);
                 const data = await res.json();
+                
+                // Populate verdict
+                if (data.verdict) {
+                    document.getElementById('intel-verdict-text').innerText = data.verdict.outlook || 'Mixed / Neutral';
+                    document.getElementById('intel-verdict-reason').innerText = data.verdict.reason || 'Waiting for market cues';
+                    document.getElementById('intel-fno-days').innerText = data.fno_days || '0';
+                    document.getElementById('intel-verdict-emoji').innerText = (data.verdict.outlook || '').toLowerCase().includes('bullish') ? '??' : ((data.verdict.outlook || '').toLowerCase().includes('bearish') ? '??' : '?');
+                }
+                
+                // Populate FII / DII
+                if (data.fii) {
+                    document.getElementById('intel-fii-val').innerText = data.fii.net_flow || '--';
+                    document.getElementById('intel-fii-status').innerText = (data.fii.net_flow || '').includes('-') ? 'Net Sellers' : 'Net Buyers';
+                    document.getElementById('intel-fii-val').style.color = (data.fii.net_flow || '').includes('-') ? 'var(--loss)' : 'var(--gain)';
+                }
+                if (data.dii) {
+                    document.getElementById('intel-dii-val').innerText = data.dii.net_flow || '--';
+                    document.getElementById('intel-dii-status').innerText = (data.dii.net_flow || '').includes('-') ? 'Net Sellers' : 'Net Buyers';
+                    document.getElementById('intel-dii-val').style.color = (data.dii.net_flow || '').includes('-') ? 'var(--loss)' : 'var(--gain)';
+                }
 
                 // 1. Top Signals (Graded Live)
                 const topSigContainer = document.getElementById('intel-top-signals-list');
