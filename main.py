@@ -4230,6 +4230,7 @@ async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = Fa
                 seen_keys.add(full_key)
                 seen_keys.add(key)
                 if title_key: seen_keys.add(title_key)
+                save_seen_keys(seen_keys)
                 
         except Exception as exc:
             print(f"[ERROR] {cat_name} category failed in cycle: {exc}")
