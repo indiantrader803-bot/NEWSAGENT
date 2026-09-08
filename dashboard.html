@@ -1081,7 +1081,6 @@
                 🎯 Option Momentum AI
             </li>
             <li class="nav-item" onclick="switchPage('page-tools', this)">
-                ??? Trading Toolkit
             </li>
         </ul>
 
@@ -1680,99 +1679,6 @@
                     </div>
                 </div>
             </div>
-
-            <div class="page-panel" id="page-tools">
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem;">🛠️ Premium White-Label Trading Toolkit</h2>
-                
-                <div class="deep-cases-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                    <!-- Position Size Calculator Card -->
-                    <div class="bull-card" style="display: flex; flex-direction: column; gap: 1rem; border-color: var(--gain-border);">
-                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--gain); display: flex; align-items: center; gap: 0.5rem;">
-                            🧮 Position Size & Risk Calculator
-                        </h3>
-                        <p style="font-size: 0.82rem; color: var(--text-muted);">
-                            Calculate the optimal lot size based on your account size and risk threshold.
-                        </p>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                                <label style="font-size: 0.85rem; color: var(--text-muted);">Account Balance:</label>
-                                <input type="number" id="calc-balance" class="filter-input" style="max-width: 140px;" value="10000" />
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                                <label style="font-size: 0.85rem; color: var(--text-muted);">Risk Percentage (%):</label>
-                                <input type="number" id="calc-risk" class="filter-input" style="max-width: 140px;" value="1" step="0.5" />
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                                <label style="font-size: 0.85rem; color: var(--text-muted);">Stop Loss (Pips/Points):</label>
-                                <input type="number" id="calc-sl" class="filter-input" style="max-width: 140px;" value="30" />
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
-                                <label style="font-size: 0.85rem; color: var(--text-muted);">Instrument Category:</label>
-                                <select id="calc-asset-type" class="filter-input" style="max-width: 140px;">
-                                    <option value="forex">Forex (1 Lot = 100k)</option>
-                                    <option value="gold">Gold (1 Lot = 100 oz)</option>
-                                    <option value="crypto">Crypto / Stocks (1 Lot = 1 unit)</option>
-                                </select>
-                            </div>
-                            
-                            <button class="btn-analyze" style="width: 100%; margin-top: 0.5rem;" onclick="calculatePositionSize()">Calculate Lot Size</button>
-                            
-                            <!-- Calculator Results -->
-                            <div id="calc-results" style="display: none; margin-top: 1rem; padding: 1rem; background: rgba(16,185,129,0.1); border: 1px solid var(--gain); border-radius: 10px;">
-                                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Amount At Risk:</span>
-                                    <span style="font-weight: 700; color: var(--gain);" id="calc-res-risk">$100.00</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="font-size: 0.85rem; color: var(--text-muted);">Recommended Position Size:</span>
-                                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--gain);" id="calc-res-lots">0.33 Lots</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Telegram Setup Panel -->
-                    <div class="bear-card" style="display: flex; flex-direction: column; gap: 1rem; border-color: var(--loss-border);">
-                        <h3 style="font-size: 1.1rem; font-weight: 600; color: var(--loss); display: flex; align-items: center; gap: 0.5rem;">
-                            📢 White-Label Telegram Bot Setup
-                        </h3>
-                        <p style="font-size: 0.82rem; color: var(--text-muted);">
-                            Integrate your own Telegram signals channel. Test connection dynamically.
-                        </p>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 0.5rem;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.85rem; color: var(--text-muted);">Configured Bot Username:</span>
-                                <span style="font-weight: 600; color: var(--text-primary);">@ForexIndian_bot</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.85rem; color: var(--text-muted);">Integration Channel:</span>
-                                <span style="font-weight: 600; color: var(--text-primary);">@channel / Private Group</span>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 0.85rem; color: var(--text-muted);">Status:</span>
-                                <span style="padding: 0.2rem 0.5rem; background: rgba(16,185,129,0.1); color: var(--gain); border-radius: 20px; font-size: 0.72rem; font-weight: 700; border: 1px solid var(--gain);">Active</span>
-                            </div>
-                            
-                            <hr style="border: 0; border-top: 1px solid var(--card-border); margin: 0.5rem 0;" />
-                            
-                            <button id="btn-test-telegram" class="btn-analyze" style="width: 100%; border-color: var(--loss-border); background: transparent; color: var(--text-primary);" onclick="triggerTelegramTest()">
-                                ⚡ Send Test Telegram Message
-                            </button>
-                            
-                            <div id="telegram-test-result" style="display: none; font-size: 0.82rem; padding: 0.8rem; border-radius: 8px; text-align: center;"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-        </div>
-    </div>
-
-
-        
 
     <script>
         let currentTab = 'ALL';
