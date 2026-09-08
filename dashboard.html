@@ -3564,5 +3564,95 @@
 
         
     </script>
+
+<script>
+let momentumInterval = null;
+
+async function startMomentumEngine() {
+    try {
+        const res = await fetch(`${API_BASE}/api/momentum/start`);
+        const data = await res.json();
+        if (data.status === "Started") {
+            alert("Engine Started");
+            pollMomentum();
+            if (!momentumInterval) momentumInterval = setInterval(pollMomentum, 3000);
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Failed to start engine.");
+    }
+}
+
+async function stopMomentumEngine() {
+    try {
+        const res = await fetch(`${API_BASE}/api/momentum/stop`);
+        const data = await res.json();
+        if (data.status === "Stopped") {
+            alert("Engine Stopped");
+            pollMomentum();
+            if (momentumInterval) {
+                clearInterval(momentumInterval);
+                momentumInterval = null;
+            }
+        } else {
+            alert("Error: " + data.error);
+        }
+    } catch(e) {
+        console.error(e);
+        alert("Failed to stop engine.");
+    }
+}
+
+async function pollMomentum() {
+    try {
+        const res = await fetch(`${API_BASE}/api/momentum/live`);
+        const data = await res.json();
+        
+        const statusEl = document.getElementById("momentum-status");
+        if (data.running) {
+            statusEl.innerText = "Engine is ONLINE and Scanning";
+            statusEl.style.color = "var(--gain)";
+            statusEl.style.borderColor = "var(--gain)";
+            statusEl.style.background = "rgba(0, 200, 83, 0.1)";
+        } else {
+            statusEl.innerText = "Engine is currently OFFLINE";
+            statusEl.style.color = "var(--neon-accent)";
+            statusEl.style.borderColor = "var(--neon-accent)";
+            statusEl.style.background = "rgba(99, 102, 241, 0.1)";
+        }
+        
+        const tradesEl = document.getElementById("momentum-trades");
+        if (!data.trades || data.trades.length === 0) {
+            tradesEl.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem;">No active trades running.</div>';
+        } else {
+            tradesEl.innerHTML = data.trades.map(t => {
+                return `<div style="border: 1px solid var(--card-border); padding: 10px; border-radius: 8px;">
+                    <strong>${t.symbol}</strong> | Entry: ${t.entry_price} | PnL: ${t.pnl || '0'} 
+                    <br><span style="font-size: 0.8rem; color: var(--text-muted);">Max Price: ${t.highest_price || t.entry_price}</span>
+                </div>`;
+            }).join('');
+        }
+        
+        const logsEl = document.getElementById("momentum-logs");
+        if (!data.logs || data.logs.length === 0) {
+            logsEl.innerHTML = 'No logs yet.';
+        } else {
+            logsEl.innerHTML = data.logs.map(l => {
+                return `<div><span style="color:var(--text-muted)">[${new Date(l.timestamp).toLocaleTimeString()}]</span> <strong>${l.symbol}</strong>: ${l.message}</div>`;
+            }).join('');
+        }
+        
+    } catch (e) {
+        console.error("Momentum polling error:", e);
+    }
+}
+
+// Check initial status
+document.addEventListener("DOMContentLoaded", () => {
+    pollMomentum();
+});
+</script>
 </body>
 </html>
