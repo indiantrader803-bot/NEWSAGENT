@@ -3229,22 +3229,43 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
     )
     
     try:
-        raw_res = _best_ai(prompt)
-        if not raw_res: return None
-        
         import json
         import re
-        
-        # Strip backticks if the AI returns markdown JSON
-        match = re.search(r'\{.*\}', raw_res, re.DOTALL)
-        if match:
-            raw_res = match.group(0)
-            
-        data = json.loads(raw_res)
-        
-        if not data.get("is_trade"):
+
+        def extract_json(raw: str):
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            return json.loads(match.group(0)) if match else json.loads(raw)
+
+        # First model check (GPT-6 Astra)
+        astra_raw = _call_explabs_api(prompt)
+        if not astra_raw: return None
+        astra_data = extract_json(astra_raw)
+        if not astra_data.get("is_trade"):
             return None
             
+        # Second model check (DeepSeek / OpenAI / Llama3)
+        # We ask the second model just to verify yes/no
+        verify_prompt = (
+            "You are a strict risk-manager. Review this news and decide if it is a highly actionable A+ grade trade setup.\n"
+            "News:\n" + text_body + "\n\n"
+            "Return ONLY a valid JSON object with the key 'is_trade': boolean (true if highly actionable, false if general noise)."
+        )
+        
+        # Give API a break to avoid 429
+        import time
+        time.sleep(2)
+        
+        second_model_raw = _groq_chat(verify_prompt)
+        if not second_model_raw: return None
+        second_model_data = extract_json(second_model_raw)
+        
+        if not second_model_data.get("is_trade"):
+            print(f"[CONSENSUS REJECTED] First model approved but second model rejected: {title}")
+            return None
+            
+        print(f"[CONSENSUS APPROVED] Both AI models agree on strong setup: {title}")
+        data = astra_data
+        
         asset = data.get("asset", "Unknown")
         direction = data.get("direction", "BUY").upper()
         entry = data.get("entry", "CMP")
