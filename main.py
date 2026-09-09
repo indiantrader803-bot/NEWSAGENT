@@ -6250,7 +6250,7 @@ async def worker_loop() -> None:
 
     # ── Regular news broadcast & high-impact monitoring ───────────────────────
     jq.run_repeating(news_broadcast_job,      interval=FETCH_INTERVAL_SECONDS,       first=10)
-    jq.run_repeating(high_impact_check_job,   interval=HIGH_IMPACT_CHECK_INTERVAL,   first=5)
+    # jq.run_repeating(high_impact_check_job,   interval=HIGH_IMPACT_CHECK_INTERVAL,   first=5)
 
     # ── Crypto pump screener (every N seconds, configurable) ────────────────────
     jq.run_repeating(crypto_screener_job,     interval=crypto_screener.CRYPTO_SCAN_INTERVAL, first=30)
