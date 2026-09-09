@@ -3213,7 +3213,7 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
     prompt = (
         "You are an elite institutional trader and analyst. Analyze the following news.\n"
         "1. Determine if this news is STRONG and IMPORTANT enough to trigger a high-probability trade (minimum 80% confidence).\n"
-        "2. If it is NOT a highly actionable trade setup, you must set 'is_trade' to false.\n"
+        "2. CRITICAL: If the news is just general information, earnings summaries, or vague market noise, YOU MUST SET 'is_trade' to false. Only output true if this is an explicit, high-priority, A+ grade trade setup.\n"
         "3. If it IS a strong trade setup, extract the Asset Name, the Direction (BUY/SELL), "
         "and calculate logical Entry Price, Take Profit (TP), and Stop Loss (SL) levels based on current market context or standard technical patterns for the asset.\n"
         "4. Write a professional trading analysis EXCLUSIVELY IN BENGALI explaining the rationale.\n\n"
