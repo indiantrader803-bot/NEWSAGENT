@@ -3236,9 +3236,13 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
             match = re.search(r'\{.*\}', raw, re.DOTALL)
             return json.loads(match.group(0)) if match else json.loads(raw)
 
-        # First model check (GPT-6 Astra)
+        # Intelligent Failover: Try Astra first, fallback to NVIDIA/Groq
         astra_raw = _call_explabs_api(prompt)
-        if not astra_raw: return None
+        if not astra_raw:
+            print("[AUTO-UPGRADE] Astra rate-limited. Falling back to NVIDIA/Groq Primary.")
+            astra_raw = _groq_chat(prompt)
+            if not astra_raw: return None
+            
         astra_data = extract_json(astra_raw)
         if not astra_data.get("is_trade"):
             return None
