@@ -3289,6 +3289,21 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
             f"?? *???????? (Analysis):*\n{analysis}\n\n"
             f"?? _Source:_ {article.get('source_name', 'Market News')}"
         )
+        import random
+        
+        affiliates = [
+            "?? *Exclusive Deal:* Get 20% OFF Challenge Purchases at Atlas Funded + $5 per FTP! Use code 12275: [Join Atlas Funded](https://affiliates.atlasfunded.com/Tracking/click/?affid=12275&campaign=11320&product_id=1&t_type=Register&t_lang=EN)",
+            "?? *Exclusive Deal:* Get up to 20% on every funded account with AquaFunded! [Join AquaFunded](https://www.aquafunded.com/?afmc=6e9)",
+            "?? *Exclusive Deal:* Get 50% Deposit Match + $10,000 risk-free demo on Pocket Option! Code: 50START [Claim Bonus](https://v4.lands-po.com/en/land/001-QT-02?utm_campaign=865170&utm_source=affiliate&utm_medium=sr&a=5zrdNdJrvFxqJO&al=1794767&ac=smart-link&cid=979105&code=50START)",
+            "?? *Exclusive Deal:* 15% Trading Fee Discount & Volume Rebates on Delta Exchange! Code: YXQSZA [Join Delta](https://www.delta.exchange/?code=YXQSZA)",
+            "?? *Exclusive Deal:* 20% RevShare + $85.00 CPA at Fundex Prop! Code: GGG34QEO [Join Fundex](https://prop.fundex.gg/rc/GGG34QEO)",
+            "?? *Exclusive Deal:* 15%-22% CPA at Blue Guardian! Code: 1tgf [Join Blue Guardian](https://blueguardian.com/?afmc=1tgf)",
+            "?? *Exclusive Deal:* Get a 10%-15% discount per evaluation at Funded Trader Markets! Code: arnab [Join FTM](https://fundedtradermarkets.com/ref/arnab)",
+            "?? *Exclusive Deal:* Get 15%-20% CPA at MyFundedFutures! Code: FUTURES2026 [Join MFFU](https://mffu.com/f/85f1f73f30)"
+        ]
+        chosen_affiliate = random.choice(affiliates)
+        
+        msg = msg + f"\n\n{chosen_affiliate}"
         return msg
     except Exception as e:
         print(f"[AI FORMATTER ERROR] {e}")
