@@ -3320,9 +3320,8 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
         
         msg = (
             f"? *STRONG {cat_header} TRADE ALERT* ?\n\n"
-            f"?? *News:* _{news_summary}_
-
-"            f"*{asset}* | {icon}\n\n"
+            f"?? *News:* _{news_summary}_\n\n"
+            f"*{asset}* | {icon}\n\n"
             f"?? *Entry:* {entry}\n"
             f"? *Take Profit (TP):* {tp}\n"
             f"?? *Stop Loss (SL):* {sl}\n\n"
