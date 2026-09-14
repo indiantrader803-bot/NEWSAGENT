@@ -1,5 +1,10 @@
 import asyncio
 
+# Force new premium API Key
+import os
+os.environ["EXPLABS_API_KEY"] = "xpl_9e4816d14429d3334136cd4e5bd1cf2021ca92fa"
+
+
 import time as _time_module
 _last_main_alert = 0
 async def _send_main_alert(bot, msg):
