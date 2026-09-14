@@ -3262,6 +3262,7 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
         "- tp: string (Target price)\n"
         "- sl: string (Stop loss)\n"
         "- analysis_bengali: string (Proper analysis in Bengali language)\n"
+        "- news_summary: string (1-sentence concise English summary of the original news headline)\n"
     )
     
     try:
@@ -3312,13 +3313,16 @@ def ai_generate_trade_message(article: dict, category: str) -> str | None:
         tp = data.get("tp", "Open")
         sl = data.get("sl", "Strict")
         analysis = data.get("analysis_bengali", "")
+        news_summary = data.get("news_summary", title)
         
         icon = "?? BUY" if "BUY" in direction else "?? SELL"
         cat_header = category.replace("_", " ").upper()
         
         msg = (
             f"? *STRONG {cat_header} TRADE ALERT* ?\n\n"
-            f"*{asset}* | {icon}\n\n"
+            f"?? *News:* _{news_summary}_
+
+"            f"*{asset}* | {icon}\n\n"
             f"?? *Entry:* {entry}\n"
             f"? *Take Profit (TP):* {tp}\n"
             f"?? *Stop Loss (SL):* {sl}\n\n"
