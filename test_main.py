@@ -399,6 +399,7 @@ class AsyncWorkerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bot.send_message.await_count + bot.send_photo.await_count, 0)
 
     async def test_run_worker_cycle_sends_forex_and_india_messages(self):
+        main._is_first_cycle = False
         bot = AsyncMock()
         seen_keys = set()
         recent_date = main.datetime.now(main.timezone.utc).isoformat()
@@ -408,6 +409,7 @@ class AsyncWorkerTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(main, "fetch_latest_articles", return_value=[article]), \
              patch.object(main, "send_options_suggestion", return_value=0), \
              patch.object(main, "format_market_snapshot_block", return_value=None), \
+             patch.object(main, "ai_generate_trade_message", return_value="Mocked message"), \
              patch.object(main, "fetch_current_prices", return_value={"EUR/USD": 1.0800}), \
              patch.object(main, "TELEGRAM_CHAT_ID", "@channel"):
             sent = await main.run_worker_cycle(bot, seen_keys)
