@@ -1897,7 +1897,7 @@ def _call_nvidia_api(prompt: str, system: str | None = None, json_mode: bool = F
     messages.append({"role": "user", "content": prompt})
     
     payload = {
-        "model": "deepseek-ai/deepseek-v4-pro-0813",
+        "model": "meta/llama-3.1-70b-instruct",
         "messages": messages,
         "temperature": 1,
         "top_p": 0.95,
@@ -1982,7 +1982,7 @@ def _analyzer_groq_chat(prompt: str, system_prompt: str | None = None, json_mode
     if not ANALYZER_GROQ_API_KEY:
         return None
 
-    models_to_try = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    models_to_try = ["groq/compound", "qwen/qwen3.6-27b"]
     for m in models_to_try:
         payload = {
             "model": m,
@@ -2038,7 +2038,7 @@ def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama-3.3-70b-versatile",
+                "model": "groq/compound",
                 "messages": messages,
             },
             timeout=15,
@@ -2058,7 +2058,7 @@ def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "llama-3.1-8b-instant",
+                    "model": "qwen/qwen3.6-27b",
                     "messages": messages,
                 },
                 timeout=15,
@@ -2066,7 +2066,11 @@ def _groq_chat(prompt: str, system_prompt: str | None = None) -> str | None:
             resp.raise_for_status()
             text = resp.json()["choices"][0]["message"]["content"].strip()
             return escape(text)
-        except Exception:
+        except Exception as e:
+            if hasattr(e, "response") and e.response:
+                print("[GROQ] Error:", e.response.status_code, e.response.text)
+            else:
+                print("[GROQ] Error:", e)
             return None
 
 
