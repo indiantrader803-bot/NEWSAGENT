@@ -57,19 +57,13 @@ async def continuous_loop():
         finally:
             main.save_seen_keys(seen_keys)
             
-        print("[WORKER] Running market monitors...")
+        print("[WORKER] Running paper trades evaluator...")
         try:
             await asyncio.gather(
-                single_pass_worker.monitor_indian_market(bot),
-                single_pass_worker.monitor_us_market(bot),
-                single_pass_worker.monitor_forex_signals(bot),
-                single_pass_worker.monitor_crypto_market(bot),
-                single_pass_worker.monitor_commodities(bot),
-                single_pass_worker.monitor_realtime_alerts(bot),
                 paper_trader.evaluate_open_trades(bot)
             )
         except Exception as e:
-            print(f"[WORKER] Error in market monitors: {e}")
+            print(f"[WORKER] Error in paper trades: {e}")
                 
         single_pass_worker.state.save()
         
