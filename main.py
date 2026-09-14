@@ -7,6 +7,7 @@ os.environ["EXPLABS_API_KEY"] = "xpl_9e4816d14429d3334136cd4e5bd1cf2021ca92fa"
 
 import time as _time_module
 _last_main_alert = 0
+_is_first_cycle = True
 async def _send_main_alert(bot, msg):
     global _last_main_alert
     now = _time_module.time()
@@ -4262,6 +4263,7 @@ async def send_institutional_signals(bot: Bot, seen_keys: set[str]) -> int:
 
 
 async def run_worker_cycle(bot: Bot, seen_keys: set[str], silent_init: bool = False) -> int:
+    global _is_first_cycle
     total_sent = 0
     
     categories = [
