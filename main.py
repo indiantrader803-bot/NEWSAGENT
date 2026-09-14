@@ -2775,10 +2775,30 @@ def fetch_latest_articles(query: str = FOREX_QUERY) -> list[dict[str, Any]]:
     combined = cached_api_articles + filtered_live
     seen = set()
     unique = []
+    
+    # AMNESIA FIX: Ignore extremely old articles so GitHub Actions doesn't resend them on runner restarts
+    from datetime import datetime, timezone
+    from dateutil.parser import parse as parse_date
+    now_utc = datetime.now(timezone.utc)
+    
     for article in combined:
         key = article_key(article)
         if key and key in seen:
             continue
+            
+        # Parse pubDate and drop if older than 12 hours
+        pub_str = str(article.get("pubDate") or article.get("publishedAt") or "")
+        if pub_str:
+            try:
+                dt = parse_date(pub_str)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                hours_old = (now_utc - dt).total_seconds() / 3600
+                if hours_old > 12:
+                    continue # Skip old news
+            except Exception:
+                pass
+                
         if key:
             seen.add(key)
         unique.append(article)
@@ -6357,7 +6377,13 @@ def main() -> int:
         print(f"[ERROR] Missing required environment variables: {', '.join(missing)}")
         return 1
 
-    asyncio.run(worker_loop())
+    if os.environ.get("RENDER") == "true":
+        print("[DEPLOYMENT] Running on Render. Telegram Bot is hosted on GitHub Actions to ensure 100% uptime even if Render sleeps. Starting Web Server only...")
+        import uvicorn
+        port = int(os.getenv("PORT", "8080"))
+        uvicorn.run("main:app_asgi", host="0.0.0.0", port=port, log_level="info")
+    else:
+        asyncio.run(worker_loop())
     return 0
 
 
