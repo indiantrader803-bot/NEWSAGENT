@@ -849,13 +849,6 @@ async def run_24x7_worker():
 
     # Create all monitoring tasks
     tasks = [
-        monitor_indian_market(bot),
-        monitor_us_market(bot),
-        monitor_forex_signals(bot),
-        monitor_crypto_market(bot),
-        monitor_commodities(bot),
-        monitor_realtime_alerts(bot),
-        send_market_briefing(bot),
         keep_alive_ping(),
     ]
     
